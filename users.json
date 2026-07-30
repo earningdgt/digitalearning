@@ -1,0 +1,50 @@
+[
+  {
+    "username": "meddy",
+    "phone": "0750434712",
+    "balance": 270000,
+    "investments": [
+      {
+        "machineId": 1,
+        "cost": 30000,
+        "dailyRate": 3000,
+        "period": 90,
+        "daysEarned": 90,
+        "purchaseDate": "2026-07-29T18:13:03.389Z"
+      }
+    ]
+  },
+  {
+    "username": "meddy",
+    "phone": "0770999530",
+    "balance": 0,
+    "investments": []
+  },
+  {
+    "username": "mark",
+    "phone": "0702038852",
+    "balance": 0,
+    "investments": [],
+    "referredBy": null,
+    "referralCount": 0
+  },
+  {
+    "username": "umar",
+    "phone": "0749444532",
+    "balance": 770999580,
+    "investments": [],
+    "referredBy": null,
+    "referralCount": 0
+  },
+  {
+    "username": "john",
+    "phone": "0740399509",
+    "password": "123456",
+    "balance": 0,
+    "investments": [],
+    "withdrawals": [],
+    "transactions": [],
+    "referredBy": null,
+    "referralCount": 0
+  }
+]
