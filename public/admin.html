@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,6 +25,13 @@
         .lock-box { background: #141a21; border: 1px solid #222f3e; padding: 30px; border-radius: 10px; text-align: center; max-width: 320px; width: 100%; }
         .lock-box input { width: 100%; padding: 12px; margin: 15px 0; background: #1c242e; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 18px; outline: none; letter-spacing: 3px; }
         .lock-box button { background: #ff0055; color: white; border: none; padding: 12px; width: 100%; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 16px; }
+
+        /* Tools Section Custom CSS Styles */
+        .tools-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
+        .tool-card { flex: 1; min-width: 280px; background: #141a21; border: 1px solid #222f3e; padding: 20px; border-radius: 10px; }
+        .tool-card h4 { margin-top: 0; color: #fff; font-size: 16px; }
+        .tool-card input, .tool-card select { width: 100%; padding: 10px; margin-bottom: 12px; background: #1c242e; border: 1px solid #222f3e; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 14px; outline: none; }
+        .tool-card button { width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -52,6 +60,31 @@
         <div class="stat-card">
             <h3>Active Mining Rows</h3>
             <p id="activeMachinesBox" style="color:#3b82f6;">0 Nodes</p>
+        </div>
+    </div>
+
+    <!-- NEW SYSTEMS ADMINISTRATIVE ACTION CONTROLS PANEL -->
+    <div class="tools-grid">
+        <!-- Module A: Manual Adjust Balance Action -->
+        <div class="tool-card">
+            <h4>Modify Account Balance</h4>
+            <p style="font-size: 12px; color: #8a99ad; margin-top: -5px; margin-bottom: 15px;">Enter a positive number to deposit funds or a negative number to deduct funds.</p>
+            <input type="text" id="toolPhone" placeholder="User Phone Number">
+            <input type="number" id="toolAmount" placeholder="Amount Value (e.g. 50000 or -20000)">
+            <button onclick="executeBalanceAdjustment()" style="background: #ff0055; color: white;">Apply Balance Adjust</button>
+        </div>
+
+        <!-- Module B: Comp System Machine Injection -->
+        <div class="tool-card">
+            <h4>Gift Hardware Contract</h4>
+            <p style="font-size: 12px; color: #8a99ad; margin-top: -5px; margin-bottom: 15px;">Injects an active running mining hardware profile directly into user profiles at zero cost.</p>
+            <input type="text" id="giftPhone" placeholder="User Phone Number">
+            <select id="giftMachineId">
+                <option value="1">Eco Miner V1 (3,000 UGX Daily)</option>
+                <option value="2">Cloud Core Server (5,000 UGX Daily)</option>
+                <option value="3">Supercomputing Cluster (8,000 UGX Daily)</option>
+            </select>
+            <button onclick="executeMachineGift()" style="background: #10b981; color: white;">Deploy Free Machine</button>
         </div>
     </div>
 
@@ -153,34 +186,3 @@ async function loadPlatformMetrics() {
                     lbody.appendChild(tr);
                 });
             } else {
-                lbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No platform transaction tracking events recorded yet.</td></tr>`;
-            }
-        }
-    } catch (err) {
-        console.error("Tracking connection error.");
-    }
-}
-
-function authenticateAdmin() {
-    const input = document.getElementById('pinInput').value;
-    if(!input) return;
-    savedAdminPin = input;
-    
-    fetch('/api/admin/overview', {
-        headers: { 'x-admin-pin': savedAdminPin }
-    }).then(res => {
-        if(res.ok) {
-            document.getElementById('gateScreen').style.display = 'none';
-            document.getElementById('dashboardContent').style.display = 'block';
-            loadPlatformMetrics();
-            setInterval(loadPlatformMetrics, 5000);
-        } else {
-            alert("Incorrect Admin Passcode Pin.");
-            document.getElementById('pinInput').value = "";
-        }
-    });
-}
-</script>
-
-</body>
-</html>
