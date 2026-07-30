@@ -192,4 +192,92 @@ async function executeMachineGift() {
     const phone = document.getElementById('giftPhone').value.trim();
     const machineId = document.getElementById('giftMachineId').value;
     
+    let dailyRate = 3000;        `;
+        
+        const lbody = document.getElementById('ledgerTableBody');
+        lbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No platform transaction tracking events recorded yet.</td></tr>`;
+    } catch (err) {
+        console.error("Metrics load failure", err);
+    }
+}
+
+function authenticateAdmin() {
+    const input = document.getElementById('pinInput').value;
+    if (input === "9999") {
+        savedAdminPin = input;
+        document.getElementById('gateScreen').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+        loadPlatformMetrics();
+    } else {
+        alert("Incorrect Administrative Password Pin Profile Match Failure.");
+    }
+}
+
+async function executeBalanceAdjustment() {
+    const phone = document.getElementById('toolPhone').value.trim();
+    const amount = document.getElementById('toolAmount').value.trim();
+
+    if (!phone || !amount) {
+        alert("Please enter a phone number and an amount.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/adjust-balance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-pin': savedAdminPin
+            },
+            body: JSON.stringify({ phone: phone, amount: parseInt(amount) })
+        });
+
+        const result = await response.json();
+        alert(result.message);
+        if (result.success) loadPlatformMetrics();
+    } catch (err) {
+        console.error(err);
+        alert("Network communication error.");
+    }
+}
+
+async function executeMachineGift() {
+    const phone = document.getElementById('giftPhone').value.trim();
+    const machineId = document.getElementById('giftMachineId').value;
+    
     let dailyRate = 3000;
+    if (machineId === "2") dailyRate = 5000;
+    if (machineId === "3") dailyRate = 8000;
+
+    if (!phone) {
+        alert("Please enter a target user phone number.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/gift-machine', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-pin': savedAdminPin
+            },
+            body: JSON.stringify({
+                phone: phone,
+                machineId: parseInt(machineId),
+                dailyRate: dailyRate,
+                period: 90
+            })
+        });
+
+        const result = await response.json();
+        alert(result.message);
+        if (result.success) loadPlatformMetrics();
+    } catch (err) {
+        console.error(err);
+        alert("Error executing process automation routine.");
+    }
+}
+</script>
+</body>
+</html>
+
