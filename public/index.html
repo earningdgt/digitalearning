@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Earning - Sign In / Sign Up</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .auth-container { background: #1e1e1e; padding: 40px 30px; border-radius: 12px; width: 100%; max-width: 380px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); text-align: center; border: 1px solid #2a2a2a; }
+        h2 { margin-top: 0; margin-bottom: 5px; color: #00ffcc; font-size: 26px; }
+        p { color: #aaa; font-size: 14px; margin-bottom: 25px; }
+        input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #333; background: #2a2a2a; color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 15px; outline: none; transition: 0.3s; }
+        input:focus { border-color: #00ffcc; }
+        .btn { width: 100%; padding: 14px; background: #00ffcc; border: none; color: #121212; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 15px; transition: 0.3s; }
+        .btn:hover { background: #00cc99; }
+        .network-note { font-size: 12px; color: #888; margin-top: 8px; text-align: left; line-height: 1.4; }
+        .toggle-text { margin-top: 20px; font-size: 14px; color: #aaa; }
+        .toggle-link { color: #00ffcc; cursor: pointer; font-weight: bold; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <!-- CREATE ACCOUNT FORM VIEW (SIGN UP) -->
+    <div id="signUpView">
+        <h2>Create Account</h2>
+        <p>Join the digital hardware mining platform</p>
+        <form id="registerForm">
+            <input type="text" id="regUsername" placeholder="Username" required>
+            <input type="tel" id="regPhone" placeholder="Phone Number (e.g., 077xxxxxxx)" required>
+            <input type="password" id="regPassword" placeholder="Create Password" minlength="4" required>
+            <div class="network-note">Accepts registered MTN (077/078/076) & Airtel (075/070) mobile numbers.</div>
+            <button type="submit" class="btn">Register Account</button>
+        </form>
+        <div class="toggle-text">
+            Already have an account? <span class="toggle-link" onclick="toggleAuthViews(false)">Sign In</span>
+        </div>
+    </div>
+
+    <!-- WELCOME BACK LOGIN VIEW (SIGN IN) -->
+    <div id="signInView" style="display: none;">
+        <h2>Welcome Back</h2>
+        <p>Sign in to manage your digital mining nodes</p>
+        <form id="loginForm">
+            <input type="tel" id="loginPhone" placeholder="Enter Your Phone Number" required>
+            <input type="password" id="loginPassword" placeholder="Enter Password" required>
+            <div class="network-note">Input the mobile money wallet number and passcode connected to your profile.</div>
+            <button type="submit" class="btn" style="background: #00ff88;">Sign In</button>
+        </form>
+        <div class="toggle-text">
+            Don't have an account yet? <span class="toggle-link" onclick="toggleAuthViews(true)">Sign Up</span>
+        </div>
+    </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const referredByCode = urlParams.get('ref') || null;
+
+function toggleAuthViews(showSignUp) {
+    if (showSignUp) {
+        document.getElementById('signUpView').style.display = 'block';
+        document.getElementById('signInView').style.display = 'none';
+    } else {
+        document.getElementById('signUpView').style.display = 'none';
+        document.getElementById('signInView').style.display = 'block';
+    }
+}
+
+function isValidUgandaPhone(phone) {
+    const ugPhoneRegex = /^(?:\+256|256|0)?(7[0-9]{8})$/;
+    return ugPhoneRegex.test(phone);
+}
+
+// 1. SIGN UP ACTION HANDLER
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const password = document.getElementById('regPassword').value;
+
+    if(!isValidUgandaPhone(phone)) {
+        alert("Please enter a valid MTN or Airtel Uganda phone number.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, phone, password, referredBy: referredByCode })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            localStorage.setItem('activePhone', phone);
+            window.location.href = 'dashboard.html';
+        } else {
+            alert("Registration failed: " + result.message);
+        }
+    } catch (err) {
+        alert("Cannot connect to server. Ensure your backend server.js is running.");
+    }
+});
+
+// 2. SIGN IN ACTION HANDLER
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const phone = document.getElementById('loginPhone').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if(!isValidUgandaPhone(phone)) {
+        alert("Please enter a valid MTN or Airtel Uganda phone number.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, password })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            localStorage.setItem('activePhone', phone);
+            window.location.href = 'dashboard.html';
+        } else {
+            alert("Login failed: " + result.message);
+        }
+    } catch (err) {
+        alert("Connection failure. Make sure server.js is currently active.");
+    }
+});
+</script>
+</body>
+</html>
