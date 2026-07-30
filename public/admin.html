@@ -193,3 +193,37 @@ async function executeMachineGift() {
     const machineId = document.getElementById('giftMachineId').value;
     
     let dailyRate = 3000;
+    if (machineId === "2") dailyRate = 5000;
+    if (machineId === "3") dailyRate = 8000;
+
+    if (!phone) {
+        alert("Please enter a target user phone number.");
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/admin/gift-machine', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-pin': savedAdminPin
+            },
+            body: JSON.stringify({
+                phone: phone,
+                machineId: parseInt(machineId),
+                dailyRate: dailyRate,
+                period: 90
+            })
+        });
+
+        const result = await response.json();
+        alert(result.message);
+        if (result.success) loadPlatformMetrics();
+    } catch (err) {
+        console.error(err);
+        alert("Error executing process automation routine.");
+    }
+}
+</script>
+</body>
+</html>
