@@ -334,4 +334,6 @@ setInterval(() => {
     if (updated) writeDatabase(database);
 }, 60000); 
 
-app.listen(PORT, () => { console.log(`Server is running live at http://localhost:${PORT}`); });
+app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
+
+module.exports = app;
