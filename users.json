@@ -40,6 +40,7 @@
     "username": "john",
     "phone": "0740399509",
     "password": "123456",
+    "role": "admin",
     "balance": 0,
     "investments": [],
     "withdrawals": [],
