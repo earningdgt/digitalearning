@@ -464,4 +464,9 @@ app.post('/api/user/withdraw', async (req, res) => {
         return res.status(500).json({ message: 'Internal server account withdrawal fault' });
     }
 });
+        const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running successfully on port ${PORT}`);
+});
+
 
