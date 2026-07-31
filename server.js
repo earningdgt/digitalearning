@@ -7,7 +7,8 @@ const PORT = process.env.PORT || 3000; 
 const ADMIN_SECRET_PIN = "9999"; 
 
 // 1. Establish Secure Connection to Cloud Database Engine
-const MONGO_URI = process.env.MONGO_URI; 
+const MONGO_URI = process.env.MONGO_URI;
+
 
 if (!MONGO_URI) {
 console.error("CRITICAL RUNTIME WARNING: process.env.MONGO_URI is empty inside Railway variables!");
