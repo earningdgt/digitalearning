@@ -1,407 +1,384 @@
 const express = require('express');
-const fs = require('fs');
+const mongoose = require('mongoose');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-
-const DB_FILE = path.join(__dirname, 'users.json');
 const ADMIN_SECRET_PIN = "9999"; 
+
+// 1. Establish Secure Connection to Cloud Database Engine
+// The server will look for your secret link inside Railway environment variables
+const MONGO_URI = process.env.MONGO_URI || "PASTE_YOUR_MONGODB_CONNECTION_STRING_HERE";
+
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("Database connected successfully! Ready for permanent tracking..."))
+    .catch(err => console.error("Database initialization fault:", err));
+
+// 2. Define Permanent User Data Model Schema (Passwords Saved Plain-Text as Requested)
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true },
+    phone: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, default: "user" },
+    balance: { type: Number, default: 0 },
+    referralCount: { type: Number, default: 0 },
+    referredBy: { type: String, default: null },
+    investments: { type: Array, default: [] },
+    withdrawals: { type: Array, default: [] },
+    transactions: { type: Array, default: [] }
+});
+
+const User = mongoose.model('User', userSchema);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-function readDatabase() {
-    try {
-        if (!fs.existsSync(DB_FILE)) return [];
-        const data = fs.readFileSync(DB_FILE, 'utf8');
-        return JSON.parse(data || '[]');
-    } catch (error) {
-        console.error("Database reading error:", error);
-        return [];
-    }
-}
-
-function writeDatabase(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
-}
-
-// 1. Account Registration Endpoint
-app.post('/api/register', (req, res) => {
+// 3. Live Endpoint 1: Account Registration Module
+app.post('/api/register', async (req, res) => {
     const { username, phone, password, referredBy } = req.body;
     if (!username || !phone || !password) {
         return res.status(400).json({ success: false, message: "Missing required inputs" });
     }
 
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
-    
-    if (user) {
-        return res.status(400).json({ success: false, message: "An account with this phone number already exists." });
-    }
-
-    user = {
-        username: username,
-        phone: phone,
-        password: password,
-        balance: 0,
-        investments: [],
-        withdrawals: [],
-        transactions: [],
-        referredBy: referredBy || null,
-        referralCount: 0
-    };
-    
-    if (referredBy) {
-        let referrer = database.find(u => u.phone === referredBy);
-        if (referrer) {
-            referrer.referralCount = (referrer.referralCount || 0) + 1;
-            referrer.balance += 1000; 
-            if (!referrer.transactions) referrer.transactions = [];
-            referrer.transactions.push({
-                type: "Referral Bonus",
-                amount: 1000,
-                date: new Date(),
-                details: `Invited ${username}`
-            });
+    try {
+        let existingUser = await User.findOne({ phone: phone });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: "An account with this phone number already exists." });
         }
-    }
 
-    database.push(user);
-    writeDatabase(database);
-    res.json({ success: true, user: user });
+        let newUser = new User({
+            username,
+            phone,
+            password,
+            balance: 0,
+            referredBy: referredBy || null
+        });
+
+        if (referredBy) {
+            let referrer = await User.findOne({ phone: referredBy });
+            if (referrer) {
+                referrer.referralCount += 1;
+                referrer.balance += 1000; 
+                referrer.transactions.push({
+                    type: "Referral Bonus",
+                    amount: 1000,
+                    date: new Date(),
+                    details: `Invited ${username}`
+                });
+                await referrer.save();
+            }
+        }
+
+        await newUser.save();
+        res.json({ success: true, user: newUser });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Server database execution error." });
+    }
 });
 
-// 2. Account Secure Login Verification
-app.post('/api/login', (req, res) => {
+// 4. Live Endpoint 2: Secure Login Verification
+app.post('/api/login', async (req, res) => {
     const { phone, password } = req.body;
     if (!phone || !password) {
         return res.status(400).json({ success: false, message: "Missing inputs" });
     }
 
-    const database = readDatabase();
-    const user = database.find(u => u.phone === phone);
+    try {
+        const user = await User.findOne({ phone: phone });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "No account identified with this phone number." });
+        }
 
-    if (!user) {
-        return res.status(404).json({ success: false, message: "No account identified with this phone number." });
+        if (user.password !== password) {
+            return res.status(401).json({ success: false, message: "Incorrect security credentials." });
+        }
+
+        res.json({ success: true, user });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Server connection failure." });
     }
-
-    if (user.password !== password) {
-        return res.status(401).json({ success: false, message: "Incorrect security password credentials." });
-    }
-
-    res.json({ success: true, user });
 });
 
-// 3. Fetch Single Profile Route
-app.get('/api/user/:phone', (req, res) => {
-    const database = readDatabase();
-    const user = database.find(u => u.phone === req.params.phone);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    res.json({ success: true, user });
+// 5. Live Endpoint 3: Fetch Single Client Dashboard Profile Metrics
+app.get('/api/user/:phone', async (req, res) => {
+    try {
+        const user = await User.findOne({ phone: req.params.phone });
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+        res.json({ success: true, user });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Error fetching data matrix parameters." });
+    }
 });
 
-// 4. Manual Deposit Request Input Logging
-app.post('/api/deposit', (req, res) => {
-    const { phone, amount, txId } = req.body;
+// 6. Live Endpoint 4: Manual Request Logging Matrix
+app.post('/api/deposit', async (req, res) => {
+    const { phone, amount, txId, details } = req.body;
     if (!phone || !amount || !txId) {
         return res.status(400).json({ success: false, message: "Missing verification payload inputs." });
     }
 
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
+    try {
+        let user = await User.findOne({ phone: phone });
+        if (!user) return res.status(404).json({ success: false, message: "User profile not found." });
 
-    if (!user) return res.status(404).json({ success: false, message: "User profile not found." });
+        user.transactions.push({
+            type: "Deposit Pending",
+            amount: parseInt(amount),
+            date: new Date(),
+            txRef: txId,
+            details: details || `Tx ID: ${txId} - Awaiting Verification`
+        });
 
-    const cleanAmount = parseInt(amount);
-
-    if (!user.transactions) user.transactions = [];
-    user.transactions.push({
-        type: "Deposit Pending",
-        amount: cleanAmount,
-        date: new Date(),
-        txRef: txId,
-        details: `Tx ID: ${txId} - Awaiting Fahad's Verification`
-    });
-
-    writeDatabase(database);
-    res.json({ success: true, message: "Manual request logged successfully!" });
+        await user.save();
+        res.json({ success: true, message: "Manual request logged successfully! Awaiting validation check rules." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Database write failure." });
+    }
 });
 
-// 5. Investment Purchase Endpoint
-app.post('/api/invest', (req, res) => {
+// 7. Live Endpoint 5: Activate Mining Contract Node Matrix
+app.post('/api/invest', async (req, res) => {
     const { phone, machineId, cost, dailyRate, period } = req.body;
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
+    try {
+        let user = await User.findOne({ phone: phone });
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+        if (user.balance < cost) return res.status(400).json({ success: false, message: "Insufficient balance!" });
 
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    if (user.balance < cost) return res.status(400).json({ success: false, message: "Insufficient balance!" });
+        user.balance -= cost;
+        user.investments.push({ machineId, cost, dailyRate, period, daysEarned: 0, purchaseDate: new Date() });
+        user.transactions.push({ type: "Investment", amount: -cost, date: new Date(), details: `Activated Machine M${machineId}` });
 
-    user.balance -= cost;
-    user.investments.push({ machineId, cost, dailyRate, period, daysEarned: 0, purchaseDate: new Date() });
-
-    if (!user.transactions) user.transactions = [];
-    user.transactions.push({ type: "Investment", amount: -cost, date: new Date(), details: `Activated Machine M${machineId}` });
-
-    writeDatabase(database);
-    res.json({ success: true, balance: user.balance, message: "Investment activated successfully!" });
+        await user.save();
+        res.json({ success: true, balance: user.balance, message: "Investment node activated successfully!" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Investment pipeline failure." });
+    }
 });
 
-// 6. Automated Payout Withdrawal Request
-app.post('/api/withdraw', (req, res) => {
+// 8. Live Endpoint 6: Initialize Cashout Payout Request
+app.post('/api/withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const withdrawAmount = parseInt(amount);
 
-    if (!phone || !withdrawAmount) return res.status(400).json({ success: false, message: "Invalid parameters." });
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
+    try {
+        let user = await User.findOne({ phone: phone });
+        if (!user) return res.status(404).json({ success: false, message: "User not found." });
+        if (withdrawAmount < 5000) return res.status(400).json({ success: false, message: "Minimum is 5,000 UGX." });
+        if (user.balance < withdrawAmount) return res.status(400).json({ success: false, message: "Insufficient balance." });
 
-    if (!user) return res.status(404).json({ success: false, message: "User not found." });
-    if (withdrawAmount < 5000) return res.status(400).json({ success: false, message: "Minimum is 5,000 UGX." });
-    if (user.balance < withdrawAmount) return res.status(400).json({ success: false, message: "Insufficient balance." });
+        user.balance -= withdrawAmount;
+        const withdrawalId = Date.now().toString(); 
+        user.withdrawals.push({ id: withdrawalId, amount: withdrawAmount, status: "Pending Approval", requestedAt: new Date() });
+        user.transactions.push({ type: "Withdrawal", amount: -withdrawAmount, date: new Date(), details: "Pending Cashout Review", withdrawalId: withdrawalId });
 
-    user.balance -= withdrawAmount;
-    if (!user.withdrawals) user.withdrawals = [];
-    const withdrawalId = Date.now().toString(); 
-    user.withdrawals.push({ id: withdrawalId, amount: withdrawAmount, status: "Pending Approval", requestedAt: new Date() });
-
-    if (!user.transactions) user.transactions = [];
-    user.transactions.push({ type: "Withdrawal", amount: -withdrawAmount, date: new Date(), details: "Pending Cashout Review", withdrawalId: withdrawalId });
-
-    writeDatabase(database);
-    res.json({ success: true, balance: user.balance, message: `Payout initialization logged! ${withdrawAmount.toLocaleString()} UGX is processing.` });
+        await user.save();
+        res.json({ success: true, balance: user.balance, message: `Payout initialized! ${withdrawAmount.toLocaleString()} UGX is processing.` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Cashout pipeline initialization error." });
+    }
 });
 
-// ADVANCED ADMIN FUNCTION 1: Force Adjust Account Balance Directly
-app.post('/api/admin/adjust-balance', (req, res) => {
+// 9. Live Endpoint 7: Administrative Network Overview Metrics Aggregation
+app.get('/api/admin/overview', async (req, res) => {
+    const clientPin = req.headers['x-admin-pin'];
+    if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
+
+    try {
+        const allUsers = await User.find({});
+        let totalInvestedVolume = 0;
+        let activeMachinesCount = 0;
+        let globalLedger = [];
+
+        allUsers.forEach(u => {
+            u.investments.forEach(i => {
+                totalInvestedVolume += i.cost;
+                activeMachinesCount += 1;
+            });
+            u.transactions.forEach(t => {
+                globalLedger.push({
+                    username: u.username,
+                    phone: u.phone,
+                    type: t.type,
+                    amount: t.amount,
+                    details: t.details,
+                    date: t.date,
+                    txRef: t.txRef,
+                    withdrawalId: t.withdrawalId
+                });
+            });
+        });
+
+        globalLedger.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        res.json({
+            success: true,
+            totalUsers: allUsers.length,
+            totalInvestedVolume,
+            activeMachinesCount,
+            usersList: allUsers,
+            globalLedger: globalLedger.slice(0, 50)
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Error compiling admin records system parameters." });
+    }
+});
+
+// 10. Live Endpoint 8: Direct Administrative Capital Shifting Matrix Override
+app.post('/api/admin/adjust-balance', async (req, res) => {
     const clientPin = req.headers['x-admin-pin'];
     if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
 
     const { phone, amount } = req.body;
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
+    try {
+        let user = await User.findOne({ phone: phone });
+        if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
 
-    if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
+        const adjustValue = parseInt(amount);
+        user.balance += adjustValue;
+        user.transactions.push({
+            type: "Admin Adjustment",
+            amount: adjustValue,
+            date: new Date(),
+            details: `Balance altered manually by Administrator override`
+        });
 
-    const adjustValue = parseInt(amount);
-    user.balance += adjustValue;
-
-    if (!user.transactions) user.transactions = [];
-    user.transactions.push({
-        type: "Admin Adjustment",
-        amount: adjustValue,
-        date: new Date(),
-        details: `Balance altered manually by Fahad`
-    });
-
-    writeDatabase(database);
-    res.json({ success: true, message: `Successfully adjusted balance by ${adjustValue.toLocaleString()} UGX!` });
-});
-
-// ADVANCED ADMIN FUNCTION 2: Gift Active Machine to User without Cost
-app.post('/api/admin/gift-machine', (req, res) => {
+        await user.save();
+        res.json({ success: true, message: `Successfully adjusted balance by ${adjustValue.toLocaleString()} UGX!` });
+    } catch (err) {
+// 11. Live Endpoint 9: Inject Free Hardware Node Matrix Asset
+app.post('/api/admin/gift-machine', async (req, res) => {
     const clientPin = req.headers['x-admin-pin'];
     if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
 
-    const { phone, machineId, name, dailyRate, period } = req.body;
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
+    const { phone, machineId, dailyRate, period } = req.body;
+    try {
+        let user = await User.findOne({ phone: phone });
+        if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
 
-    if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
+        user.investments.push({
+            machineId: parseInt(machineId),
+            cost: 0, 
+            dailyRate: parseInt(dailyRate),
+            period: parseInt(period),
+            daysEarned: 0,
+            purchaseDate: new Date()
+        });
 
-    user.investments.push({
-        machineId: parseInt(machineId),
-        cost: 0, // Gifted for free
-        dailyRate: parseInt(dailyRate),
-        period: parseInt(period),
-        daysEarned: 0,
-        purchaseDate: new Date()
-    });
+        user.transactions.push({
+            type: "Admin Gift",
+            amount: 0,
+            date: new Date(),
+            details: `Complimentary Node Level ${machineId} deployed by Admin override`
+        });
 
-    if (!user.transactions) user.transactions = [];
-    user.transactions.push({
-        type: "Admin Gift",
-        amount: 0,
-        date: new Date(),
-        details: `Free ${name} hardware gifted by Admin`
-    });
-
-    writeDatabase(database);
-    res.json({ success: true, message: `Successfully gifted ${name} to ${user.username}!` });
+        await user.save();
+        res.json({ success: true, message: `Successfully gifted Computing Node Layer Level ${machineId} to target profile!` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Gifting routine node asset transmission error." });
+    }
 });
 
-// 7. Admin Action Endpoint (Process Approval or Rejections for Logs Queue)
-app.post('/api/admin/withdraw/action', (req, res) => {
+// 12. Live Endpoint 10: Process Pending Verification Deposits Actions
+app.post('/api/admin/verify-deposit', async (req, res) => {
     const clientPin = req.headers['x-admin-pin'];
     if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
 
-    const { phone, withdrawalId, statusAction, type } = req.body; 
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
+    const { phone, txRef, action } = req.body;
+    try {
+        let user = await User.findOne({ phone: phone });
+        if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
 
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+        let transaction = user.transactions.find(t => t.txRef === txRef && t.type === "Deposit Pending");
+        if (!transaction) return res.status(404).json({ success: false, message: "Pending deposit transaction not found" });
 
-    if (type === 'deposit') {
-        let transaction = user.transactions.find(t => t.txRef === withdrawalId && t.type === "Deposit Pending");
-        if (!transaction) return res.status(404).json({ success: false, message: "Pending deposit item not identified" });
-
-        if (statusAction === "Approved") {
+        if (action === 'approve') {
+            transaction.type = "Deposit Approved";
+            transaction.details = `Tx ID: ${txRef} - Verified by Admin`;
             user.balance += transaction.amount;
-            transaction.type = "Deposit";
-            transaction.details = `Approved by Admin (Ref: ${withdrawalId})`;
+            res.json({ success: true, message: `Deposit of ${transaction.amount.toLocaleString()} UGX approved successfully!` });
         } else {
             transaction.type = "Deposit Rejected";
-            transaction.details = `Rejected by Admin (Ref: ${withdrawalId})`;
+            transaction.details = `Tx ID: ${txRef} - Rejected by Admin`;
+            res.json({ success: true, message: "Deposit request rejected." });
         }
-        writeDatabase(database);
-        return res.json({ success: true, message: `Deposit request marked as ${statusAction}!` });
+
+        user.markModified('transactions');
+        await user.save();
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Deposit verification processing fault error." });
     }
-
-       let withdrawal = user.withdrawals.find(w => w.id === withdrawalId);
-    if (!withdrawal) return res.status(404).json({ success: false, message: "Withdrawal log item not found" });
-
-    if (statusAction === "Approved") {
-        withdrawal.status = "Approved";
-        let transaction = user.transactions.find(t => t.withdrawalId === withdrawalId);
-        if (transaction) transaction.details = "Payout Approved & Dispatched via Mobile Money";
-    } else if (statusAction === "Rejected") {
-        withdrawal.status = "Rejected";
-        user.balance += withdrawal.amount;
-        let transaction = user.transactions.find(t => t.withdrawalId === withdrawalId);
-        if (transaction) transaction.details = "Payout Rejected (Funds Refunded)";
-        user.transactions.push({ type: "Refund", amount: withdrawal.amount, date: new Date(), details: `Refund for Rejected Withdrawal ID: ${withdrawalId}` });
-    }
-
-    writeDatabase(database);
-    res.json({ success: true, message: `Withdrawal marked as ${statusAction}!` });
 });
 
-// 8. Protected Admin Overview Dashboard Aggregator Endpoint
-app.get('/api/admin/overview', (req, res) => {
+// 13. Live Endpoint 11: Process Pending Withdrawal Payout Verification Actions
+app.post('/api/admin/verify-withdrawal', async (req, res) => {
     const clientPin = req.headers['x-admin-pin'];
     if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
 
-    const database = readDatabase();
-    let totalDepositsCalculated = 0;
-    let activeHardwareUnitsCount = 0;
-    let masterLedgerList = [];
-    let pendingCashoutsList = [];
+    const { phone, withdrawalId, action } = req.body;
+    try {
+        let user = await User.findOne({ phone: phone });
+        if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
 
-    database.forEach(u => {
-        if (u.investments) {
-            activeHardwareUnitsCount += u.investments.length;
-            u.investments.forEach(i => { totalDepositsCalculated += i.cost; });
-        }
-        if (u.withdrawals) {
-            u.withdrawals.forEach(w => {
-                if (w.status === "Pending Approval") { pendingCashoutsList.push({ id: w.id, username: u.username, phone: u.phone, amount: w.amount, date: w.requestedAt, type: 'withdrawal' }); }
-            });
-        }
-        if (u.transactions) {
-            u.transactions.forEach(t => {
-                masterLedgerList.push({ username: u.username, phone: u.phone, type: t.type, amount: t.amount, date: t.date, details: t.details });
-                if (t.type === "Deposit Pending") {
-                    pendingCashoutsList.push({ id: t.txRef, username: u.username, phone: u.phone, amount: t.amount, date: t.date, type: 'deposit' });
-                }
-            });
-        }
-    });
+        let withdrawal = user.withdrawals.find(w => w.id === withdrawalId);
+        let transaction = user.transactions.find(t => t.withdrawalId === withdrawalId);
 
-    masterLedgerList.sort((a, b) => new Date(b.date) - new Date(a.date));
-    pendingCashoutsList.sort((a, b) => new Date(b.date) - new Date(a.date));
+        if (!withdrawal) return res.status(404).json({ success: false, message: "Withdrawal record not found" });
 
-    res.json({ success: true, totalUsers: database.length, totalInvestedVolume: totalDepositsCalculated, activeMachinesCount: activeHardwareUnitsCount, usersList: database, globalLedger: masterLedgerList, pendingCashouts: pendingCashoutsList });
+        if (action === 'approve') {
+            withdrawal.status = "Approved & Disbursed";
+            if (transaction) {
+                transaction.type = "Withdrawal Success";
+                transaction.details = "Cashout Approved and Processed";
+            }
+            res.json({ success: true, message: "Withdrawal payout approved successfully!" });
+        } else {
+            withdrawal.status = "Rejected / Cancelled";
+            if (transaction) {
+                transaction.type = "Withdrawal Rejected";
+                transaction.details = "Cashout request denied. Funds refunded.";
+            }
+            user.balance += withdrawal.amount;
+            res.json({ success: true, message: "Withdrawal rejected. Funds refunded to user balance." });
+        }
+
+        user.markModified('withdrawals');
+        user.markModified('transactions');
+        await user.save();
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Withdrawal verification processing fault error." });
+    }
 });
 
-// Income Distribution Loop (Every 60 seconds)
-setInterval(() => {
-    let database = readDatabase();
-    let updated = false;
-
-    database.forEach(user => {
-        if (user.investments && user.investments.length > 0) {
-            user.investments.forEach(inv => {
-                if (inv.daysEarned < inv.period) {
-                    user.balance += inv.dailyRate;
-                    inv.daysEarned += 1;
-                    updated = true;
-                    if (!user.transactions) user.transactions = [];
-                    user.transactions.push({ type: "Earnings", amount: inv.dailyRate, date: new Date(), details: `Mining Income` });
+// 14. Automated Background Interval: Yield Accumulation Cycle (Runs every 60 seconds)
+setInterval(async () => {
+    try {
+        const users = await User.find({});
+        for (let user of users) {
+            if (user.investments && user.investments.length > 0) {
+                let earnedToday = 0;
+                user.investments.forEach(m => {
+                    if (m.daysEarned < m.period) {
+                        m.daysEarned += 1;
+                        earnedToday += m.dailyRate;
+                    }
+                });
+                if (earnedToday > 0) {
+                    user.balance += earnedToday;
+                    user.transactions.push({
+                        type: "Mining Yield",
+                        amount: earnedToday,
+                        date: new Date(),
+                        details: `Accrued passive computing yields from active nodes matrix clusters`
+                    });
+                    user.markModified('investments');
+                    await user.save();
                 }
-            });
+            }
         }
-    });
-    if (updated) writeDatabase(database);
+    } catch (err) {
+        console.error("Automated background accrual error execution fault loop:", err);
+    }
 }, 60000);
-// ADVANCED ADMIN FUNCTION 3: Approve or Reject a Deposit Request
-app.post('/api/admin/verify-deposit', (req, res) => {
-    const clientPin = req.headers['x-admin-pin'];
-    if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
 
-    const { phone, txRef, action } = req.body; // action can be 'approve' or 'reject'
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
+app.listen(PORT, () => console.log(`Server engine actively parsing network request operations on port channel connection: ${PORT}`));
 
-    if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
-
-    // Find the pending deposit transaction
-    let transaction = user.transactions.find(t => t.txRef === txRef && t.type === "Deposit Pending");
-    if (!transaction) return res.status(404).json({ success: false, message: "Pending deposit transaction not found" });
-
-    if (action === 'approve') {
-        transaction.type = "Deposit Approved";
-        transaction.details = `Tx ID: ${txRef} - Verified by Admin`;
-        user.balance += transaction.amount; // Credit the money to user's wallet
-        
-        res.json({ success: true, message: `Deposit of ${transaction.amount.toLocaleString()} UGX approved successfully!` });
-    } else {
-        transaction.type = "Deposit Rejected";
-        transaction.details = `Tx ID: ${txRef} - Rejected by Admin`;
-        
-        res.json({ success: true, message: "Deposit request rejected." });
-    }
-
-    writeDatabase(database);
-});
-
-// ADVANCED ADMIN FUNCTION 4: Approve or Reject a Withdrawal Request
-app.post('/api/admin/verify-withdrawal', (req, res) => {
-    const clientPin = req.headers['x-admin-pin'];
-    if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
-
-    const { phone, withdrawalId, action } = req.body; // action can be 'approve' or 'reject'
-    let database = readDatabase();
-    let user = database.find(u => u.phone === phone);
-
-    if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
-
-    // Find the pending withdrawal
-    let withdrawal = user.withdrawals.find(w => w.id === withdrawalId);
-    let transaction = user.transactions.find(t => t.withdrawalId === withdrawalId);
-
-    if (!withdrawal) return res.status(404).json({ success: false, message: "Withdrawal record not found" });
-
-    if (action === 'approve') {
-        withdrawal.status = "Approved & Disbursed";
-        if (transaction) {
-            transaction.type = "Withdrawal Success";
-            transaction.details = "Cashout Approved and Processed";
-        }
-        res.json({ success: true, message: "Withdrawal payout approved successfully!" });
-    } else {
-        withdrawal.status = "Rejected / Cancelled";
-        if (transaction) {
-            transaction.type = "Withdrawal Rejected";
-            transaction.details = "Cashout request denied. Funds refunded.";
-        }
-        user.balance += withdrawal.amount; // Refund the money back to the user
-        res.json({ success: true, message: "Withdrawal rejected. Funds refunded to user balance." });
-    }
-
-    writeDatabase(database);
-});
-
-
-app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
-
-module.exports = app;
