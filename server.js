@@ -262,10 +262,7 @@ setInterval(async () => {
 
         console.error("Background passive contract calculation runtime fault:", err);
     }
-}, 60000);
-
 // START THE LIVE EXPORT EXPRESS SERVER ENGINE
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running successfully on port ${PORT}`);
 });
