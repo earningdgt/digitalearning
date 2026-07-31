@@ -201,3 +201,31 @@ async function loadPlatformMetrics() {
 
 
     lbody.appendChild(tr);
+// Function to handle clicking Approve/Reject on user deposits
+async function resolveDeposit(phone, txRef, action) {
+    // Prevent accidental balance adjustments with a confirmation box
+    if (!confirm(`Are you sure you want to ${action} this transaction (${txRef})?`)) return;
+
+    try {
+        const response = await fetch('/api/admin/resolve-deposit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ phone, txRef, action })
+        });
+
+        const data = await response.json();
+
+                if (response.ok) {
+            alert(`Transaction successfully ${action}ed!`);
+            location.reload(); // Refresh ledger logs view to display the changes
+        } else {
+            alert(`Error: ${data.message || 'Failed to update transaction status'}`);
+        }
+
+    } catch (error) {
+        console.error('Network ledger communication error:', error);
+        alert('A network communication error occurred. Check browser console logs.');
+    }
+}
