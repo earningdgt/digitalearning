@@ -1,100 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Earning - Dashboard</title>
-    <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0c0f12; color: #e2e8f0; margin: 0; padding: 25px; }
-        .dashboard-container { max-width: 1200px; margin: 0 auto; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; background: #141a21; padding: 15px 25px; border-radius: 12px; border: 1px solid #222f3e; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
-        .user-meta h2 { margin: 0 0 5px 0; color: #00ff88; font-size: 22px; }
-        .user-meta p { margin: 0; color: #8a99ad; font-size: 14px; }
-        .nav-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; outline: none; }
-        .btn-profile { background: #00e5ff; color: #0c0f12; }
-        .btn-deposit { background: #00ff88; color: #0c0f12; }
-        .btn-withdraw { background: #eab308; color: #0c0f12; }
-        .btn-logout { background: #ef4444; color: white; }
-        .balance-box { background: #11151d; border: 1px solid #222f3e; padding: 8px 18px; border-radius: 8px; text-align: right; }
-        .balance-box small { font-size: 11px; color: #8a99ad; text-transform: uppercase; display: block; }
-        .balance-box span { font-size: 20px; font-weight: bold; color: #00ffcc; }
-        h2.section-title { font-size: 22px; color: #fff; border-left: 4px solid #00ff88; padding-left: 12px; margin-top: 40px; margin-bottom: 20px; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-        .card { background: #141a21; border: 1px solid #222f3e; border-radius: 12px; padding: 20px; text-align: center; position: relative; overflow: hidden; }
-        .card h3 { margin-top: 0; color: #fff; font-size: 16px; }
-        .card .cost { font-size: 22px; font-weight: bold; color: #00ffcc; margin: 12px 0; }
-        .card .details { font-size: 13px; color: #8a99ad; margin-bottom: 18px; line-height: 1.5; }
-        .card .btn-buy { background: #00ff88; color: #0c0f12; width: 100%; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .empty-state { grid-column: 1 / -1; background: #141a21; border: 1px dashed #222f3e; border-radius: 12px; padding: 40px; text-align: center; color: #6b7280; font-size: 15px; }
-        
-        /* Modal Window Layout CSS */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center; z-index: 100000; padding: 15px; box-sizing: border-box; }
-        .modal-content { background: #141a21; border: 1px solid #222f3e; border-radius: 12px; padding: 25px; max-width: 450px; width: 100%; box-sizing: border-box; position: relative; }
-        .modal-content h3 { color: #fff; margin-top: 0; margin-bottom: 15px; font-size: 20px; border-bottom: 1px solid #222f3e; padding-bottom: 10px; }
-        .modal-content label { display: block; font-size: 13px; color: #8a99ad; margin-bottom: 6px; text-align: left; }
-        .modal-content input, .modal-content select { width: 100%; padding: 10px; background: #0c0f12; border: 1px solid #222f3e; color: #fff; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; font-size: 14px; outline: none; }
-        .modal-content .modal-btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 15px; }
-        .close-btn { position: absolute; top: 15px; right: 15px; color: #8a99ad; cursor: pointer; font-size: 20px; font-weight: bold; }
-        .close-btn:hover { color: #fff; }
-    </style>
-</head>
-<body>
-
-<div class="dashboard-container">
-    <div class="navbar">
-        <div class="user-meta">
-            <h2 id="welcomeNameBox">Loading Profile...</h2>
-            <p id="userPhoneBox">07XXXXXXXX</p>
+            <div class="details">Daily Yield: 65,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 5,850,000 UGX</div>
+            <button onclick="buyMachine(7, 750000, 65000, 90)" class="btn btn-buy">Activate Node</button>
         </div>
-        <div class="nav-actions">
-            <button onclick="openModal('profileModal')" class="btn btn-profile">👤 Profile & Invite</button>
-            <button onclick="openModal('depositModal')" class="btn btn-deposit">💰 Deposit</button>
-            <button onclick="openModal('withdrawModal')" class="btn btn-withdraw">⚙️ Withdraw</button>
-            <div class="balance-box">
-                <small>Account Balance</small>
-                <span id="userBalanceBox">0 UGX</span>
+        <!-- Level 8 -->
+        <div class="card">
+            <div class="machine-photo-box" style="color: #ff9900;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
             </div>
-            <button onclick="logout()" class="btn btn-logout">Logout</button>
-        </div>
-    </div>
-
-    <h2 class="section-title">Available Hardware Machines</h2>
-    <div class="grid-container">
-        <!-- Level 1 -->
-        <div class="card">
-            <h3>Eco Miner V1 (Level 1)</h3>
-            <div class="cost">30,000 UGX</div>
-            <div class="details">Daily Yield: 3,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 270,000 UGX</div>
-            <button onclick="buyMachine(1, 30000, 3000, 90)" class="btn btn-buy">Activate Node</button>
-        </div>
-        <!-- Level 2 -->
-        <div class="card">
-            <h3>Cloud Core Server (Level 2)</h3>
-            <div class="cost">50,000 UGX</div>
-            <div class="details">Daily Yield: 5,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 450,000 UGX</div>
-            <button onclick="buyMachine(2, 50000, 5000, 90)" class="btn btn-buy">Activate Node</button>
-        </div>
-        <!-- Level 3 -->
-        <div class="card">
-            <h3>Supercomputing Cluster (Level 3)</h3>
-            <div class="cost">80,000 UGX</div>
-            <div class="details">Daily Yield: 8,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 720,000 UGX</div>
-            <button onclick="buyMachine(3, 80000, 8000, 90)" class="btn btn-buy">Activate Node</button>
-        </div>
-        <!-- Level 4 -->
-        <div class="card">
-            <h3>Quantum Node Matrix (Level 4)</h3>
-            <div class="cost">150,000 UGX</div>
-            <div class="details">Daily Yield: 16,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 1,440,000 UGX</div>
-            <button onclick="buyMachine(4, 150000, 16000, 90)" class="btn btn-buy">Activate Node</button>
-        </div>
-        <!-- Level 5 -->
-        <div class="card">
-            <h3>Satellite Mining Grid (Level 5)</h3>
-            <div class="cost">300,000 UGX</div>
-            <div class="details">Daily Yield: 35,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 3,150,000 UGX</div>
-            <button onclick="buyMachine(5, 300000, 35000, 90)" class="btn btn-buy">Activate Node</button>
+            <h3>Supreme Datacenter (Level 8)</h3>
+            <div class="cost">1,000,000 UGX</div>
+            <div class="details">Daily Yield: 80,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 7,200,000 UGX</div>
+            <button onclick="buyMachine(8, 1000000, 80000, 90)" class="btn btn-buy">Activate Node</button>
         </div>
     </div>
 
@@ -104,7 +19,6 @@
     </div>
 </div>
 
-<!-- PROFILE MODAL BOX -->
 <div id="profileModal" class="modal">
     <div class="modal-content">
         <span onclick="closeModal('profileModal')" class="close-btn">&times;</span>
@@ -116,12 +30,11 @@
     </div>
 </div>
 
-<!-- MANUAL DEPOSIT INTERFACE MODAL -->
 <div id="depositModal" class="modal">
     <div class="modal-content">
         <span onclick="closeModal('depositModal')" class="close-btn">&times;</span>
         <h3>💰 Fund Wallet Deposit</h3>
-        <p style="font-size:13px; color:#8a99ad; margin-top:-5px; margin-bottom:15px; text-align:left;">Send deposit to Fahad: **0791246012** via Mobile Money. Paste transaction ID below:</p>
+        <p style="font-size:13px; color:#8a99ad; margin-top:-5px; margin-bottom:15px; text-align:left;">Send deposit to Fahad: **0740399509** via Mobile Money. Paste transaction ID below:</p>
         <label>Deposit Funding Value (UGX):</label>
         <input type="number" id="depositAmount" placeholder="Example: 30000" min="5000">
         <label>Transaction ID reference value (TxID):</label>
@@ -130,7 +43,6 @@
     </div>
 </div>
 
-<!-- AUTOMATED CASH OUT WITHDRAW MODAL -->
 <div id="withdrawModal" class="modal">
     <div class="modal-content">
         <span onclick="closeModal('withdrawModal')" class="close-btn">&times;</span>
@@ -141,12 +53,11 @@
     </div>
 </div>
 
-<!-- Floating WhatsApp Customer Care Button -->
 <a href="https://whatsapp.com." 
    target="_blank" 
    style="position: fixed; bottom: 20px; right: 20px; background-color: #25d366; color: white; padding: 14px 20px; border-radius: 50px; font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: bold; text-decoration: none; box-shadow: 0px 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px; z-index: 99999;">
    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://w3.org">
-   <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.324 5.328 0 11.859 0c3.166.001 6.141 1.233 8.377 3.469 2.235 2.237 3.465 5.212 3.464 8.381-.003 6.535-5.328 11.86-11.859 11.86h-.002c-2.008-.002-3.982-.534-5.734-1.548L0 24zm6.273-3.754l.375.223c1.551.921 3.328 1.407 5.148 1.408h.005c5.495 0 9.967-4.473 9.97-9.97.002-2.662-1.033-5.166-2.915-7.05C17.014 3.016 14.512 1.977 11.86 1.977c-5.497 0-9.97 4.474-9.973 9.971-.001 1.929.503 3.813 1.46 5.512l.24.423-.997 3.64 3.743-.981zM17.75 14.73c-.314-.157-1.858-.917-2.146-1.022-.288-.105-.497-.157-.706.157-.208.314-.808 1.022-.99 1.23-.181.208-.363.233-.677.077-.314-.157-1.325-.488-2.525-1.558-.933-.832-1.564-1.86-1.747-2.174-.182-.314-.02-.484.137-.64.142-.141.314-.367.472-.55.157-.184.21-.314.314-.524.105-.21.053-.393-.026-.55-.08-.157-.706-1.701-.967-2.33-.254-.609-.513-.526-.706-.536-.183-.01-.393-.012-.603-.012-.21 0-.55.08-.838.393-.288.314-1.1 1.074-1.1 2.62 0 1.545 1.127 3.039 1.284 3.249.157.21 2.217 3.385 5.372 4.746.75.324 1.336.518 1.792.663.754.24 1.44.207 1.983.125.604-.093 1.858-.76 2.12-1.46.262-.699.262-1.309.184-1.434-.08-.125-.288-.209-.603-.366z"/>
+       <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.324 5.328 0 11.859 0c3.166.001 6.141 1.233 8.377 3.469 2.235 2.237 3.465 5.212 3.464 8.381-.003 6.535-5.328 11.86-11.859 11.86h-.002c-2.008-.002-3.982-.534-5.734-1.548L0 24zm6.273-3.754l.375.223c1.551.921 3.328 1.407 5.148 1.408h.005c5.495 0 9.967-4.473 9.97-9.97.002-2.662-1.033-5.166-2.915-7.05C17.014 3.016 14.512 1.977 11.86 1.977c-5.497 0-9.97 4.474-9.973 9.971-.001 1.929.503 3.813 1.46 5.512l.24.423-.997 3.64 3.743-.981zM17.75 14.73c-.314-.157-1.858-.917-2.146-1.022-.288-.105-.497-.157-.706.157-.208.314-.808 1.022-.99 1.23-.181.208-.363.233-.677.077-.314-.157-1.325-.488-2.525-1.558-.933-.832-1.564-1.86-1.747-2.174-.182-.314-.02-.484.137-.64.142-.141.314-.367.472-.55.157-.184.21-.314.314-.524.105-.21.053-.393-.026-.55-.08-.157-.706-1.701-.967-2.33-.254-.609-.513-.526-.706-.536-.183-.01-.393-.012-.603-.012-.21 0-.55.08-.838.393-.288.314-1.1 1.074-1.1 2.62 0 1.545 1.127 3.039 1.284 3.249.157.21 2.217 3.385 5.372 4.746.75.324 1.336.518 1.792.663.754.24 1.44.207 1.983.125.604-.093 1.858-.76 2.12-1.46.262-.699.262-1.309.184-1.434-.08-.125-.288-.209-.603-.366z"/>
    </svg>
    Chat with Support
 </a>
@@ -188,12 +99,14 @@ async function loadDashboardData() {
                     div.className = 'card';
                     div.style.borderColor = '#00ff88';
                     div.innerHTML = `
-                        <h3>Eco Node M${m.machineId}</h3>
+                        <h3>Eco Node Level ${m.machineId}</h3>
                         <div class="cost" style="color:#00ff88;">Active</div>
                         <div class="details">Daily Yield: ${m.dailyRate.toLocaleString()} UGX<br>Earned so far: ${m.daysEarned} Days</div>
                     `;
                     machContainer.appendChild(div);
                 });
+            } else {
+                machContainer.innerHTML = '<div class="empty-state">You don\'t have any active mining hardware deployed yet. Buy a machine above to start earning.</div>';
             }
         }
     } catch (err) {
