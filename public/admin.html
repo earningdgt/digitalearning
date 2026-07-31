@@ -142,7 +142,6 @@ async function loadPlatformMetrics() {
             document.getElementById('totalInvestedBox').innerText = `${(data.totalInvestedVolume || 0).toLocaleString()} UGX`;
             document.getElementById('activeMachinesBox').innerText = `${data.activeMachinesCount || 0} Nodes`;
             
-            // DYNAMIC LOOP: Automatically displays EVERY newly registered account
             const ubody = document.getElementById('userTableBody');
             ubody.innerHTML = ''; 
             
@@ -163,20 +162,42 @@ async function loadPlatformMetrics() {
                 ubody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#aaa;">No registered accounts found.</td></tr>`;
             }
 
-            // Repopulate Activity Ledger
+            // Repopulate Activity Ledger with Interactivity Approval Buttons Matrix
             const lbody = document.getElementById('ledgerTableBody');
             lbody.innerHTML = '';
+            
             if (data.globalLedger && data.globalLedger.length > 0) {
                 data.globalLedger.forEach(log => {
                     const tr = document.createElement('tr');
                     const formattedDate = new Date(log.date).toLocaleTimeString();
                     const isNegative = log.amount < 0;
                     
+                    let actionButtons = '';
+                    if (log.type === 'Deposit Pending' && log.txRef) {
+                        actionButtons = `
+                            <div style="margin-top: 5px; display: flex; gap: 5px;">
+                                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'approve')" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Approve</button>
+                                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Reject</button>
+
+                            </div>
+                        `;
+                    } else if (log.type === 'Withdrawal' && log.withdrawalId && log.details.includes('Pending')) {
+                        actionButtons = `
+                            <div style="margin-top: 5px; display: flex; gap: 5px;">
+                                <button onclick="resolveWithdrawal('${log.phone}', '${log.withdrawalId}', 'approve')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Disburse</button>
+                                <button onclick="resolveWithdrawal('${log.phone}', '${log.withdrawalId}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Deny</button>
+                            </div>
+                        `;
+                    }
+                    
                     tr.innerHTML = `
                         <td style="color:#aaa;">${formattedDate}</td>
-                        <td style="font-weight:600;">${log.username || 'System'} (${log.phone || 'Admin'})</td>
-                        <td><span style="color: ${log.type==='Deposit'?'#00ff88':log.type==='Withdrawal'?'#ff3333':'#eab308'}; font-weight:bold;">${log.type}</span></td>
-                        <td style="color:#ccc;">${log.details}</td>
+                        <td style="font-weight:600;">${log.username || 'Client'} (${log.phone})</td>
+                        <td><span style="color: ${log.type.includes('Deposit')?'#00ff88':log.type.includes('Withdrawal')?'#ff3333':'#eab308'}; font-weight:bold;">${log.type}</span></td>
+                        <td style="color:#ccc;">
+                            <div>${log.details}</div>
+                            ${actionButtons}
+                        </td>
                         <td style="font-weight:bold; color: ${isNegative?'#ff5555':'#00ff88'};">
                             ${isNegative ? '' : '+'}${log.amount.toLocaleString()} UGX
                         </td>
@@ -184,7 +205,7 @@ async function loadPlatformMetrics() {
                     lbody.appendChild(tr);
                 });
             } else {
-                lbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No platform transaction events recorded.</td></tr>`;
+                lbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No platform transaction tracking events recorded yet.</td></tr>`;
             }
         }
     } catch (err) {
@@ -199,7 +220,7 @@ function authenticateAdmin() {
         document.getElementById('gateScreen').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
         loadPlatformMetrics();
-        setInterval(loadPlatformMetrics, 10000); // Automatically updates stats every 10 seconds
+        setInterval(loadPlatformMetrics, 10000);
     } else {
         alert("Incorrect Administrative Password Pin.");
     }
@@ -267,6 +288,38 @@ async function executeMachineGift() {
     } catch (err) {
         console.error(err);
         alert("Error executing process automation routine.");
+    }
+}
+
+async function resolveDeposit(phone, txRef, action) {
+    if (!confirm(`Are you certain you want to ${action} this incoming deposit request?`)) return;
+    try {
+        const response = await fetch('/api/admin/verify-deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
+            body: JSON.stringify({ phone, txRef, action })
+        });
+        const res = await response.json();
+        alert(res.message);
+        if (res.success) loadPlatformMetrics();
+    } catch (err) {
+        alert("Verification routing link channel transmission failure.");
+    }
+}
+
+async function resolveWithdrawal(phone, withdrawalId, action) {
+    if (!confirm(`Are you certain you want to ${action} this cashout payout initialization request?`)) return;
+    try {
+        const response = await fetch('/api/admin/verify-withdrawal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
+            body: JSON.stringify({ phone, withdrawalId, action })
+        });
+        const res = await response.json();
+        alert(res.message);
+        if (res.success) loadPlatformMetrics();
+    } catch (err) {
+        alert("Payout routing execution pipeline failure.");
     }
 }
 </script>
