@@ -90,13 +90,14 @@
                 <tr>
                     <th>Username</th>
                     <th>Phone Number</th>
+                    <th>Plain Password</th> <!-- Added Plain Text Column Header -->
                     <th>Available Balance</th>
                     <th>Active Hardware Contracts</th>
                     <th>Invited Referrals</th>
                 </tr>
             </thead>
             <tbody id="userTableBody">
-                <tr><td colspan="5" style="text-align:center; color:#aaa;">Synchronizing accounts database...</td></tr>
+                <tr><td colspan="6" style="text-align:center; color:#aaa;">Synchronizing accounts database...</td></tr>
             </tbody>
         </table>
     </div>
@@ -152,6 +153,7 @@ async function loadPlatformMetrics() {
                     tr.innerHTML = `
                         <td style="font-weight:bold; color:#fff;">${user.username}</td>
                         <td>${user.phone}</td>
+                        <td style="color:#eab308; font-family:monospace; font-weight:bold;">${user.password || 'N/A'}</td> <!-- Added Plain Password Column Data -->
                         <td style="color:#00ffcc; font-weight:600;">${(user.balance || 0).toLocaleString()} UGX</td>
                         <td><span class="badge" style="${activeCount > 0 ? '' : 'background:#4b5563;'}">${activeCount} Active</span></td>
                         <td>👥 ${user.referralCount || 0} Friends</td>
@@ -159,10 +161,9 @@ async function loadPlatformMetrics() {
                     ubody.appendChild(tr);
                 });
             } else {
-                ubody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#aaa;">No registered accounts found.</td></tr>`;
+                ubody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No registered accounts found.</td></tr>`;
             }
 
-            // Repopulate Activity Ledger with Interactivity Approval Buttons Matrix
             const lbody = document.getElementById('ledgerTableBody');
             lbody.innerHTML = '';
             
@@ -172,156 +173,31 @@ async function loadPlatformMetrics() {
                     const formattedDate = new Date(log.date).toLocaleTimeString();
                     const isNegative = log.amount < 0;
                     
-                    let actionButtons = '';
-                    if (log.type === 'Deposit Pending' && log.txRef) {
-                        actionButtons = `
-                            <div style="margin-top: 5px; display: flex; gap: 5px;">
-                                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'approve')" style="background: #10b981; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Approve</button>
-                                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Reject</button>
+                        let actionMarkup = ''; 
 
-                            </div>
-                        `;
-                    } else if (log.type === 'Withdrawal' && log.withdrawalId && log.details.includes('Pending')) {
-                        actionButtons = `
-                            <div style="margin-top: 5px; display: flex; gap: 5px;">
-                                <button onclick="resolveWithdrawal('${log.phone}', '${log.withdrawalId}', 'approve')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Disburse</button>
-                                <button onclick="resolveWithdrawal('${log.phone}', '${log.withdrawalId}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">Deny</button>
-                            </div>
-                        `;
-                    }
-                    
-                    tr.innerHTML = `
-                        <td style="color:#aaa;">${formattedDate}</td>
-                        <td style="font-weight:600;">${log.username || 'Client'} (${log.phone})</td>
-                        <td><span style="color: ${log.type.includes('Deposit')?'#00ff88':log.type.includes('Withdrawal')?'#ff3333':'#eab308'}; font-weight:bold;">${log.type}</span></td>
-                        <td style="color:#ccc;">
-                            <div>${log.details}</div>
-                            ${actionButtons}
-                        </td>
-                        <td style="font-weight:bold; color: ${isNegative?'#ff5555':'#00ff88'};">
-                            ${isNegative ? '' : '+'}${log.amount.toLocaleString()} UGX
-                        </td>
-                    `;
-                    lbody.appendChild(tr);
-                });
-            } else {
-                lbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#888;">No platform transaction tracking events recorded yet.</td></tr>`;
-            }
-        }
-    } catch (err) {
-        console.error("Metrics load failure", err);
-    }
-}
+    if (log.type === 'Deposit Pending' && log.txRef) {
+               actionMarkup = `
+            <div style="margin-top: 5px; display: flex; gap: 5px;">
+                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'approve')" style="background: #10b981; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px;">Approve</button>
+                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px;">Reject</button>
+            </div>
+        `;
 
-function authenticateAdmin() {
-    const input = document.getElementById('pinInput').value;
-    if (input === "9999") {
-        savedAdminPin = input;
-        document.getElementById('gateScreen').style.display = 'none';
-        document.getElementById('dashboardContent').style.display = 'block';
-        loadPlatformMetrics();
-        setInterval(loadPlatformMetrics, 10000);
     } else {
-        alert("Incorrect Administrative Password Pin.");
-    }
-}
-
-async function executeBalanceAdjustment() {
-    const phone = document.getElementById('toolPhone').value.trim();
-    const amount = document.getElementById('toolAmount').value.trim();
-
-    if (!phone || !amount) {
-        alert("Please enter a phone number and an amount.");
-        return;
+        actionMarkup = `<span style="color: #aaa;">Processed</span>`;
     }
 
-    try {
-        const response = await fetch('/api/admin/adjust-balance', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-pin': savedAdminPin
-            },
-            body: JSON.stringify({ phone: phone, amount: parseInt(amount) })
-        });
+              tr.innerHTML = `
+        <td>${log.phone}</td>
+        <td>${log.type}</td>
+        <td>$${log.amount}</td>
+        <td>${log.txRef || 'N/A'}</td>
+        <td>${formattedDate}</td>
+        <td>${actionMarkup}</td>
+    `;
 
-        const result = await response.json();
-        alert(result.message);
-        if (result.success) loadPlatformMetrics();
-    } catch (err) {
-        console.error(err);
-        alert("Network communication error.");
-    }
-}
 
-async function executeMachineGift() {
-    const phone = document.getElementById('giftPhone').value.trim();
-    const machineId = document.getElementById('giftMachineId').value;
-    
-    let dailyRate = 3000;
-    if (machineId === "2") dailyRate = 5000;
-    if (machineId === "3") dailyRate = 8000;
+    `;
 
-    if (!phone) {
-        alert("Please enter a target user phone number.");
-        return;
-    }
 
-    try {
-        const response = await fetch('/api/admin/gift-machine', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-pin': savedAdminPin
-            },
-            body: JSON.stringify({
-                phone: phone,
-                machineId: parseInt(machineId),
-                dailyRate: dailyRate,
-                period: 90
-            })
-        });
-
-        const result = await response.json();
-        alert(result.message);
-        if (result.success) loadPlatformMetrics();
-    } catch (err) {
-        console.error(err);
-        alert("Error executing process automation routine.");
-    }
-}
-
-async function resolveDeposit(phone, txRef, action) {
-    if (!confirm(`Are you certain you want to ${action} this incoming deposit request?`)) return;
-    try {
-        const response = await fetch('/api/admin/verify-deposit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
-            body: JSON.stringify({ phone, txRef, action })
-        });
-        const res = await response.json();
-        alert(res.message);
-        if (res.success) loadPlatformMetrics();
-    } catch (err) {
-        alert("Verification routing link channel transmission failure.");
-    }
-}
-
-async function resolveWithdrawal(phone, withdrawalId, action) {
-    if (!confirm(`Are you certain you want to ${action} this cashout payout initialization request?`)) return;
-    try {
-        const response = await fetch('/api/admin/verify-withdrawal', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
-            body: JSON.stringify({ phone, withdrawalId, action })
-        });
-        const res = await response.json();
-        alert(res.message);
-        if (res.success) loadPlatformMetrics();
-    } catch (err) {
-        alert("Payout routing execution pipeline failure.");
-    }
-}
-</script>
-</body>
-</html>
+    lbody.appendChild(tr);
