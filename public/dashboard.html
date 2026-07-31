@@ -23,7 +23,6 @@
         .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
         .card { background: #141a21; border: 1px solid #222f3e; border-radius: 12px; padding: 20px; text-align: center; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
         
-        /* Fixed Vector Graphic Containment Layout Styles */
         .machine-photo-box { width: 100%; height: 100px; max-height: 100px; background: #0c0f12; border-radius: 8px; border: 1px dashed #222f3e; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; color: #00ff88; overflow: hidden; }
         .machine-photo-box svg { width: 45px; height: 45px; display: block; margin: 0 auto; max-width: 45px; max-height: 45px; }
         
@@ -165,14 +164,37 @@
 </div>
 
 <div id="depositModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 480px;">
         <span onclick="closeModal('depositModal')" class="close-btn">&times;</span>
         <h3>💰 Fund Wallet Deposit</h3>
-        <p style="font-size:13px; color:#8a99ad; margin-top:-5px; margin-bottom:15px; text-align:left;">Send deposit to Fahad: **0740399509** via Mobile Money. Paste transaction ID below:</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            <div style="background: #ffcc00; color: #000; padding: 12px; border-radius: 8px; text-align: left; font-size: 13px; font-weight: bold; border-left: 5px solid #ffaa00;">
+                🟡 MTN Mobile Money:<br>
+                Send to Number: <span style="font-size: 15px; color: #000; font-family: monospace;">0740399509</span><br>
+                Registered Name: <span style="color: #222;">FAHAD</span>
+            </div>
+            <div style="background: #e11d48; color: #fff; padding: 12px; border-radius: 8px; text-align: left; font-size: 13px; font-weight: bold; border-left: 5px solid #9f1239;">
+                🔴 Airtel Money:<br>
+                Send to Number: <span style="font-size: 15px; color: #fff; font-family: monospace;">0740399509</span><br>
+                Registered Name: <span style="color: #eee;">FAHAD</span>
+            </div>
+        </div>
+
+        <p style="font-size:12px; color:#8a99ad; margin-top:-5px; margin-bottom:15px; text-align:left;">Transfer the funds to your preferred network above. Once completed, enter the verification details below:</p>
+        
+        <label>Select Network Used:</label>
+        <select id="depositNetwork" style="width: 100%; padding: 10px; background: #0c0f12; border: 1px solid #222f3e; color: #fff; border-radius: 6px; margin-bottom: 15px; font-size: 14px; outline: none;">
+            <option value="MTN Mobile Money">MTN MoMo</option>
+            <option value="Airtel Money">Airtel Money</option>
+        </select>
+
         <label>Deposit Funding Value (UGX):</label>
         <input type="number" id="depositAmount" placeholder="Example: 30000" min="5000">
-        <label>Transaction ID reference value (TxID):</label>
+
+        <label>Transaction ID reference value (TxID / Ref):</label>
         <input type="text" id="depositTxId" placeholder="Enter Mobile Money reference">
+        
         <button onclick="submitDeposit()" class="modal-btn" style="background:#00ff88; color:#000;">Submit Verification Request</button>
     </div>
 </div>
@@ -267,13 +289,14 @@ async function buyMachine(machineId, cost, dailyRate, period) {
 async function submitDeposit() {
     const amount = document.getElementById('depositAmount').value;
     const txId = document.getElementById('depositTxId').value.trim();
+    const network = document.getElementById('depositNetwork').value;
     if (!amount || !txId) return alert("Please fill in all inputs.");
     
     try {
         const response = await fetch('/api/deposit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: activePhone, amount, txId })
+            body: JSON.stringify({ phone: activePhone, amount, txId, details: `Network: ${network} - TxID: ${txId}` })
         });
         const res = await response.json();
         alert(res.message);
