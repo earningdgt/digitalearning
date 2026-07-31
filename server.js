@@ -5,7 +5,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const ADMIN_SECRET_PIN = "9999"; 
-const DATA_FILE = path.join(__dirname, 'users.json');
+const DATA_FILE = path.resolve('/tmp', 'users.json');
+
 
 // Helper functions to read/write local file storage
 const readData = () => {
