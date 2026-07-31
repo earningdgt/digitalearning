@@ -125,7 +125,6 @@
 <script>
 let savedAdminPin = "";
 
-// 1. Gate Authentication Process
 async function authenticateAdmin() {
     const pin = document.getElementById('pinInput').value;
     if (!pin) return alert("Please type your access pin.");
@@ -150,7 +149,6 @@ async function authenticateAdmin() {
     }
 }
 
-// 2. Build Tables & Load Server Telemetry
 async function loadPlatformMetrics() {
     try {
         const response = await fetch('/api/admin/overview', {
@@ -170,7 +168,6 @@ async function loadPlatformMetrics() {
             document.getElementById('totalInvestedBox').innerText = `${(data.totalInvestedVolume || 0).toLocaleString()} UGX`;
             document.getElementById('activeMachinesBox').innerText = `${data.activeMachinesCount || 0} Nodes`;
             
-            // Populate User Accounts Panel
             const ubody = document.getElementById('userTableBody');
             ubody.innerHTML = ''; 
             
@@ -192,12 +189,11 @@ async function loadPlatformMetrics() {
                 ubody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No registered database accounts.</td></tr>`;
             }
 
-            // Populate Ledger & Actions Panel
             const lbody = document.getElementById('ledgerTableBody');
             lbody.innerHTML = '';
 
             if (data.globalledger && data.globalledger.length > 0) {
-        data.globalledger.forEach(log => {
+                       data.globalledger.forEach(log => {
             const tr = document.createElement('tr');
             const formattedDate = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
             
