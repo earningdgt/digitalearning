@@ -150,7 +150,51 @@ async function authenticateAdmin() {
     }
 }
 
-// Build Tables & Load Server Telemetry
+<script>
+let savedAdminPin = "";
+
+async function authenticateAdmin() {
+    const pin = document.getElementById('pinInput').value;
+    if (!pin) return alert("Please type your access pin.");
+
+    try {
+        const response = await fetch('/api/admin/overview', {
+            method: 'GET',
+            headers: { 'x-admin-pin': pin }
+        });
+
+        if (response.ok) {
+            savedAdminPin = pin;
+            document.getElementById('gateScreen').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+            loadPlatformMetrics();
+        } else {
+            alert("Unauthorized Pin Profile Code Entry.");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Failed connection validation sequence.");
+    }
+}
+
+async function loadPlatformMetrics() {
+    try {
+        const response = await fetch('/api/admin/overview', {
+            method: 'GET',
+            headers: { 'x-admin-pin': savedAdminPin }
+        });
+        
+        if (response.status === 403) {
+            alert("Session timeout.");
+            location.reload();
+            return;
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('totalUsersBox').innerText = data.totalUsers || "0";
+
+    // Build Tables & Load Server Telemetry
 async function loadPlatformMetrics() {
     try {
         const response = await fetch('/api/admin/overview', {
@@ -214,7 +258,7 @@ async function loadPlatformMetrics() {
                 <td style="font-weight:600; color:${log.amount >= 0 ? '#10b981' : '#ef4444'};">${(log.amount || 0).toLocaleString()} UGX</td>
             `;
             
-            let actionHTML = '<td><span style="color:#666; font-size:13px;">No Actions</span></td>';
+                        let actionHTML = '<td><span style="color:#666; font-size:13px;">No Actions</span></td>';
             if (log.type === 'Deposit Pending' && log.txRef) {
                 actionHTML = `
                     <td>
@@ -225,6 +269,7 @@ async function loadPlatformMetrics() {
                     </td>
                 `;
             }
+
             
             tr.innerHTML = baseHTML + actionHTML;
             lbody.appendChild(tr);
