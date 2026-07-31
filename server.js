@@ -423,3 +423,45 @@ app.post('/api/admin/resolve-deposit', async (req, res) => {
         return res.status(500).json({ message: 'Internal server ledger management routing fault' });
     }
 });
+        // POST route to initialize a user withdrawal transaction request
+app.post('/api/user/withdraw', async (req, res) => {
+    try {
+        const { phone, amount } = req.body;
+
+        // 1. Basic format and numeric validation
+        if (!phone || !amount || Number(amount) <= 0) {
+            return res.status(400).json({ message: 'Invalid mobile money withdrawal parameters' });
+        }
+
+        // 2. Locate user status inside MongoDB Atlas
+        const user = await mongoose.model('User').findOne({ phone });
+        if (!user) {
+            return res.status(404).json({ message: 'Target user profile not found' });
+        }
+
+        // 3. Prevent balance overdrafts before logging the ledger entry
+        if (user.balance < Number(amount)) {
+            return res.status(400).json({ message: 'Insufficient active contract account balance' });
+        }
+
+        // 4. Generate a unique transaction tracking reference ID
+        const txRef = 'WD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+        // 5. Deduct money immediately and append a pending log item
+        user.balance -= Number(amount);
+        user.transactions.push({
+            type: 'Withdrawal Pending',
+            amount: Number(amount),
+            txRef: txRef,
+            date: new Date()
+        });
+
+        await user.save();
+                               return res.json({ message: 'Withdrawal initialized successfully', txRef });
+
+    } catch (error) {
+        console.error('Withdrawal processing failure:', error);
+        return res.status(500).json({ message: 'Internal server account withdrawal fault' });
+    }
+});
+
