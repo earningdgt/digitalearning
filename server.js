@@ -276,8 +276,6 @@ setInterval(async () => {
     }
 }, 60000);
 
-// START THE LIVE EXPORT EXPRESS SERVER ENGINE
-const PORT_ENGINE = process.env.PORT || 3000;
-app.listen(PORT_ENGINE, () => {
+app.listen(PORT, () => {
     console.log("Server running successfully!");
 });
