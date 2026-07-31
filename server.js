@@ -105,23 +105,47 @@ app.post('/api/withdraw', (req, res) => {
     res.json({ success: true, balance: user.balance, txRef: withdrawalId });
 });
 
-// 7. Administrative Overview
+// 7. Administrative Overview (Aligned perfectly with admin.html)
 app.get('/api/admin/overview', (req, res) => {
     if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
+    
     let users = readData();
     let totalInvestedVolume = 0;
     let activeMachinesCount = 0;
-    let globalLedger = [];
+    let globalledger = [];
 
     users.forEach(u => {
-        u.investments.forEach(i => { totalInvestedVolume += i.cost; activeMachinesCount += 1; });
-        u.transactions.forEach(t => { globalLedger.push({ username: u.username, phone: u.phone, type: t.type, amount: t.amount, txRef: t.txRef || 'N/A', date: t.date }); });
+        if(u.investments) {
+            u.investments.forEach(i => { totalInvestedVolume += i.cost; activeMachinesCount += 1; });
+        }
+        if(u.transactions) {
+            u.transactions.forEach(t => { 
+                globalledger.push({ 
+                    username: u.username, 
+                    phone: u.phone, 
+                    type: t.type, 
+                    amount: t.amount, 
+                    txRef: t.txRef || null, 
+                    timestamp: t.date 
+                }); 
+            });
+        }
     });
-    res.json({ success: true, allUsers: users, totalInvestedVolume, activeMachinesCount, globalLedger });
+
+    res.json({ 
+        success: true, 
+        totalUsers: users.length,
+        totalInvestedVolume, 
+        activeMachinesCount, 
+        usersList: users, 
+        globalledger 
+    });
 });
 
-// 8. Resolve Deposits
-app.post('/api/admin/resolve-deposit', (req, res) => {
+// 8. Resolve Deposits & Transactions
+app.post('/api/admin/resolve-transaction', (req, res) => {
+    if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ message: "Access Denied" });
+    
     const { phone, txRef, action } = req.body;
     let users = readData();
     let user = users.find(u => u.phone === phone);
@@ -138,10 +162,47 @@ app.post('/api/admin/resolve-deposit', (req, res) => {
     }
 
     writeData(users);
-    return res.json({ message: `Transaction successfully ${action}ed!` });
+    return res.json({ message: `Transaction successfully completed!` });
 });
 
-// 9. Automated Yield Loop (Every 60 seconds)
+// 9. Tool Route: Modify Account Balance
+app.post('/api/admin/adjust-balance', (req, res) => {
+    if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ message: "Access Denied" });
+    
+    const { phone, amount } = req.body;
+    let users = readData();
+    let user = users.find(u => u.phone === phone);
+    if (!user) return res.status(404).json({ message: "User phone record missing." });
+
+    user.balance += Number(amount);
+    user.transactions.push({ type: "Admin Adjustment", amount: Number(amount), date: new Date(), details: "Balance changed by Administrator" });
+    
+    writeData(users);
+    res.json({ message: "User account balance adjusted successfully!" });
+});
+
+// 10. Tool Route: Gift Free Hardware Contract
+app.post('/api/admin/gift-contract', (req, res) => {
+    if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ message: "Access Denied" });
+    
+    const { phone, machineId } = req.body;
+    let users = readData();
+    let user = users.find(u => u.phone === phone);
+    if (!user) return res.status(404).json({ message: "User profile not found." });
+
+    let dailyRate = 3000;
+    let title = "Eco Miner V1";
+    if (machineId === "2") { dailyRate = 5000; title = "Cloud Core Server"; }
+    if (machineId === "3") { dailyRate = 8000; title = "Supercomputing Cluster"; }
+
+    user.investments.push({ machineId, cost: 0, dailyRate, period: 30, daysEarned: 0, purchaseDate: new Date() });
+    user.transactions.push({ type: "Hardware Gift", amount: 0, date: new Date(), details: `Admin deployed free ${title}` });
+
+    writeData(users);
+    res.json({ message: "Free contract deployed successfully!" });
+});
+
+// 11. Automated Yield Loop (Every 60 seconds)
 setInterval(() => {
     let users = readData();
     let updated = false;
