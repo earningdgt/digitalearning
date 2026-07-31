@@ -382,3 +382,44 @@ setInterval(async () => {
 
 app.listen(PORT, () => console.log(`Server engine actively parsing network request operations on port channel connection: ${PORT}`));
 
+// POST route to handle admin approval or rejection of deposits
+app.post('/api/admin/resolve-deposit', async (req, res) => {
+    try {
+        const { phone, txRef, action } = req.body;
+
+        if (!phone || !txRef || !action) {
+            return res.status(400).json({ message: 'Missing required parameters' });
+        }
+
+        // Find the user profile in MongoDB Atlas
+        const user = await mongoose.model('User').findOne({ phone });
+        if (!user) {
+            return res.status(404).json({ message: 'User profile not found' });
+        }
+
+        // Locate the specific transaction within the user's matrix log array
+        const transaction = user.transactions.find(t => t.txRef === txRef && t.type === 'Deposit Pending');
+        if (!transaction) {
+            return res.status(404).json({ message: 'Pending transaction matching reference not found' });
+        }
+
+        // Execute updates based on action type
+        if (action === 'approve') {
+            transaction.type = 'Deposit Approved';
+            user.balance += Number(transaction.amount); 
+        } else if (action === 'reject') {
+            transaction.type = 'Deposit Rejected';
+        } else {
+            return res.status(400).json({ message: 'Invalid administrative action request type' });
+        }
+
+        user.markModified('transactions');
+        await user.save();
+
+                        return res.json({ message: `Transaction successfully ${action}ed and profile updated` });
+
+    } catch (error) {
+        console.error('Admin resolution operational failure:', error);
+        return res.status(500).json({ message: 'Internal server ledger management routing fault' });
+    }
+});
