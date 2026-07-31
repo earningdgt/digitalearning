@@ -264,5 +264,5 @@ setInterval(async () => {
     }
 // START THE LIVE EXPORT EXPRESS SERVER ENGINE
 app.listen(PORT, () => {
-    console.log(`Server running successfully on port ${PORT}`);
+    console.log("Server running successfully!");
 });
