@@ -332,7 +332,75 @@ setInterval(() => {
         }
     });
     if (updated) writeDatabase(database);
-}, 60000); 
+}, 60000);
+// ADVANCED ADMIN FUNCTION 3: Approve or Reject a Deposit Request
+app.post('/api/admin/verify-deposit', (req, res) => {
+    const clientPin = req.headers['x-admin-pin'];
+    if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
+
+    const { phone, txRef, action } = req.body; // action can be 'approve' or 'reject'
+    let database = readDatabase();
+    let user = database.find(u => u.phone === phone);
+
+    if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
+
+    // Find the pending deposit transaction
+    let transaction = user.transactions.find(t => t.txRef === txRef && t.type === "Deposit Pending");
+    if (!transaction) return res.status(404).json({ success: false, message: "Pending deposit transaction not found" });
+
+    if (action === 'approve') {
+        transaction.type = "Deposit Approved";
+        transaction.details = `Tx ID: ${txRef} - Verified by Admin`;
+        user.balance += transaction.amount; // Credit the money to user's wallet
+        
+        res.json({ success: true, message: `Deposit of ${transaction.amount.toLocaleString()} UGX approved successfully!` });
+    } else {
+        transaction.type = "Deposit Rejected";
+        transaction.details = `Tx ID: ${txRef} - Rejected by Admin`;
+        
+        res.json({ success: true, message: "Deposit request rejected." });
+    }
+
+    writeDatabase(database);
+});
+
+// ADVANCED ADMIN FUNCTION 4: Approve or Reject a Withdrawal Request
+app.post('/api/admin/verify-withdrawal', (req, res) => {
+    const clientPin = req.headers['x-admin-pin'];
+    if (clientPin !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
+
+    const { phone, withdrawalId, action } = req.body; // action can be 'approve' or 'reject'
+    let database = readDatabase();
+    let user = database.find(u => u.phone === phone);
+
+    if (!user) return res.status(404).json({ success: false, message: "User account profile not identified" });
+
+    // Find the pending withdrawal
+    let withdrawal = user.withdrawals.find(w => w.id === withdrawalId);
+    let transaction = user.transactions.find(t => t.withdrawalId === withdrawalId);
+
+    if (!withdrawal) return res.status(404).json({ success: false, message: "Withdrawal record not found" });
+
+    if (action === 'approve') {
+        withdrawal.status = "Approved & Disbursed";
+        if (transaction) {
+            transaction.type = "Withdrawal Success";
+            transaction.details = "Cashout Approved and Processed";
+        }
+        res.json({ success: true, message: "Withdrawal payout approved successfully!" });
+    } else {
+        withdrawal.status = "Rejected / Cancelled";
+        if (transaction) {
+            transaction.type = "Withdrawal Rejected";
+            transaction.details = "Cashout request denied. Funds refunded.";
+        }
+        user.balance += withdrawal.amount; // Refund the money back to the user
+        res.json({ success: true, message: "Withdrawal rejected. Funds refunded to user balance." });
+    }
+
+    writeDatabase(database);
+});
+
 
 app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
 
