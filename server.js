@@ -249,11 +249,11 @@ user.markModified('transactions');
 await user.save();
 return res.json({ message: `Transaction successfully ${action}ed!` });
 
-} catch (error) {
-return res.status(500).json({ message: 'Internal server ledger management fault' });
-}
-
+    } catch (error) {
+        return res.status(500).json({ message: 'Internal server ledger management fault' });
+    }
 });
+
 // 11. Automated Background Yield Loop (Runs every 60 seconds)
 setInterval(async () => {
     try {
@@ -276,6 +276,7 @@ setInterval(async () => {
 }, 60000);
 
 // START THE LIVE EXPORT EXPRESS SERVER ENGINE
-app.listen(PORT, () => {
+const PORT_ENGINE = process.env.PORT || 3000;
+app.listen(PORT_ENGINE, () => {
     console.log("Server running successfully!");
 });
