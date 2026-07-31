@@ -125,7 +125,7 @@
 <script>
 let savedAdminPin = "";
 
-// Gate Authentication Process
+// 1. Gate Authentication Process
 async function authenticateAdmin() {
     const pin = document.getElementById('pinInput').value;
     if (!pin) return alert("Please type your access pin.");
@@ -150,51 +150,7 @@ async function authenticateAdmin() {
     }
 }
 
-<script>
-let savedAdminPin = "";
-
-async function authenticateAdmin() {
-    const pin = document.getElementById('pinInput').value;
-    if (!pin) return alert("Please type your access pin.");
-
-    try {
-        const response = await fetch('/api/admin/overview', {
-            method: 'GET',
-            headers: { 'x-admin-pin': pin }
-        });
-
-        if (response.ok) {
-            savedAdminPin = pin;
-            document.getElementById('gateScreen').style.display = 'none';
-            document.getElementById('dashboardContent').style.display = 'block';
-            loadPlatformMetrics();
-        } else {
-            alert("Unauthorized Pin Profile Code Entry.");
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Failed connection validation sequence.");
-    }
-}
-
-async function loadPlatformMetrics() {
-    try {
-        const response = await fetch('/api/admin/overview', {
-            method: 'GET',
-            headers: { 'x-admin-pin': savedAdminPin }
-        });
-        
-        if (response.status === 403) {
-            alert("Session timeout.");
-            location.reload();
-            return;
-        }
-
-        const data = await response.json();
-        if (data.success) {
-            document.getElementById('totalUsersBox').innerText = data.totalUsers || "0";
-
-    // Build Tables & Load Server Telemetry
+// 2. Build Tables & Load Server Telemetry
 async function loadPlatformMetrics() {
     try {
         const response = await fetch('/api/admin/overview', {
@@ -214,7 +170,7 @@ async function loadPlatformMetrics() {
             document.getElementById('totalInvestedBox').innerText = `${(data.totalInvestedVolume || 0).toLocaleString()} UGX`;
             document.getElementById('activeMachinesBox').innerText = `${data.activeMachinesCount || 0} Nodes`;
             
-            // 1. Populate User Accounts Panel
+            // Populate User Accounts Panel
             const ubody = document.getElementById('userTableBody');
             ubody.innerHTML = ''; 
             
@@ -236,7 +192,7 @@ async function loadPlatformMetrics() {
                 ubody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No registered database accounts.</td></tr>`;
             }
 
-            // 2. Populate Ledger & Actions Panel
+            // Populate Ledger & Actions Panel
             const lbody = document.getElementById('ledgerTableBody');
             lbody.innerHTML = '';
 
@@ -258,7 +214,7 @@ async function loadPlatformMetrics() {
                 <td style="font-weight:600; color:${log.amount >= 0 ? '#10b981' : '#ef4444'};">${(log.amount || 0).toLocaleString()} UGX</td>
             `;
             
-                        let actionHTML = '<td><span style="color:#666; font-size:13px;">No Actions</span></td>';
+            let actionHTML = '<td><span style="color:#666; font-size:13px;">No Actions</span></td>';
             if (log.type === 'Deposit Pending' && log.txRef) {
                 actionHTML = `
                     <td>
@@ -269,7 +225,6 @@ async function loadPlatformMetrics() {
                     </td>
                 `;
             }
-
             
             tr.innerHTML = baseHTML + actionHTML;
             lbody.appendChild(tr);
@@ -278,3 +233,72 @@ async function loadPlatformMetrics() {
         lbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No system operations processed yet.</td></tr>`;
     }
 }
+
+// 3. Action Handlers for Ledger Confirmations
+async function resolveTransaction(phone, txRef, action) {
+    if (!confirm(`Confirm administrative ${action} action execution?`)) return;
+    try {
+        const response = await fetch('/api/admin/resolve-transaction', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-admin-pin': savedAdminPin
+            },
+            body: JSON.stringify({ phone, txRef, action })
+        });
+        const resData = await response.json();
+        alert(resData.message);
+        loadPlatformMetrics();
+    } catch (err) {
+        alert("Failed execution submission query mapping.");
+    }
+}
+
+// 4. Tool Handler: Modify Account Balance
+async function executeBalanceAdjustment() {
+    const phone = document.getElementById('toolPhone').value;
+    const amount = document.getElementById('toolAmount').value;
+    if (!phone || !amount) return alert("Please specify user phone and input value change.");
+
+    try {
+        const response = await fetch('/api/admin/adjust-balance', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-admin-pin': savedAdminPin
+            },
+            body: JSON.stringify({ phone, amount: Number(amount) })
+        });
+        const data = await response.json();
+        alert(data.message || "Balance changed.");
+        loadPlatformMetrics();
+    } catch (err) {
+        alert("Server validation error on balancing update.");
+    }
+}
+
+// 5. Tool Handler: Gift Free Hardware Matrix Contract
+async function executeMachineGift() {
+    const phone = document.getElementById('giftPhone').value;
+    const machineId = document.getElementById('giftMachineId').value;
+    if (!phone) return alert("Please specify target registration phone layout.");
+
+    try {
+        const response = await fetch('/api/admin/gift-contract', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-admin-pin': savedAdminPin
+            },
+            body: JSON.stringify({ phone, machineId })
+        });
+        const data = await response.json();
+        alert(data.message || "Contract profile deployed successfully.");
+        loadPlatformMetrics();
+    } catch (err) {
+        alert("Server injection failure.");
+    }
+}
+</script>
+</body>
+</html>
