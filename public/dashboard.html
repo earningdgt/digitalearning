@@ -5,327 +5,148 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital Earning - Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 15px 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #2a2a2a; max-width: 1200px; margin: 0 auto 30px auto; }
-        .user-info h3 { margin: 0 0 5px 0; color: #00ffcc; font-size: 20px; }
-        .user-info small { color: #aaa; font-size: 14px; }
-        .balance-container { display: flex; align-items: center; gap: 15px; }
-        .balance-box { background: #2a2a2a; padding: 10px 20px; border-radius: 8px; text-align: right; border-left: 4px solid #00ffcc; }
-        .nav-btn { background: #00ffcc; color: #121212; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 5px; }
-        .nav-btn:hover { background: #00cc99; }
-        .logout-btn { background: #ff3333; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .logout-btn:hover { background: #cc0000; }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; max-width: 1200px; margin: 0 auto; }
-        .machine-card { background: #1e1e1e; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.4); border: 1px solid #2a2a2a; display: flex; flex-direction: column; }
-        .machine-img { width: 100%; height: 180px; object-fit: cover; background: #2a2a2a; }
-        .machine-details { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
-        .machine-title { font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 15px; }
-        .stats-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 15px; color: #ccc; }
-        .stat-val { color: #00ffcc; font-weight: bold; }
-        .rent-btn { width: 100%; background: #00ffcc; color: #121212; border: none; padding: 14px; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        .rent-btn:hover { background: #00cc99; }
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #1e1e1e; padding: 30px; border-radius: 12px; border: 1px solid #333; width: 90%; max-width: 480px; position: relative; max-height: 90vh; overflow-y: auto; }
-        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #aaa; }
-        .close-btn:hover { color: #fff; }
-        .modal input { width: 100%; padding: 12px; margin: 10px 0; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box; }
-        .payment-instructions { background: #252d3a; border: 1px solid #3b82f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
-        .merchant-highlight { background: #1a1a1a; padding: 10px; border-radius: 6px; border-left: 4px solid #eab308; margin: 10px 0; font-weight: bold; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #0c0f12; color: #e2e8f0; margin: 0; padding: 25px; }
+        .dashboard-container { max-width: 1200px; margin: 0 auto; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; background: #141a21; padding: 15px 25px; border-radius: 12px; border: 1px solid #222f3e; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
+        .user-meta h2 { margin: 0 0 5px 0; color: #00ff88; font-size: 22px; }
+        .user-meta p { margin: 0; color: #8a99ad; font-size: 14px; }
+        .nav-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-profile { background: #00e5ff; color: #0c0f12; }
+        .btn-deposit { background: #00ff88; color: #0c0f12; }
+        .btn-withdraw { background: #eab308; color: #0c0f12; }
+        .btn-logout { background: #ef4444; color: white; }
+        .balance-box { background: #11151d; border: 1px solid #222f3e; padding: 8px 18px; border-radius: 8px; text-align: right; }
+        .balance-box small { font-size: 11px; color: #8a99ad; text-transform: uppercase; display: block; }
+        .balance-box span { font-size: 20px; font-weight: bold; color: #00ffcc; }
+        h2.section-title { font-size: 22px; color: #fff; border-left: 4px solid #00ff88; padding-left: 12px; margin-top: 40px; margin-bottom: 20px; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: #141a21; border: 1px solid #222f3e; border-radius: 12px; padding: 20px; text-align: center; }
+        .card h3 { margin-top: 0; color: #fff; font-size: 18px; }
+        .card .cost { font-size: 24px; font-weight: bold; color: #00ffcc; margin: 15px 0; }
+        .card .details { font-size: 14px; color: #8a99ad; margin-bottom: 20px; line-height: 1.5; }
+        .card .btn-buy { background: #00ff88; color: #0c0f12; width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .empty-state { grid-column: 1 / -1; background: #141a21; border: 1px dashed #222f3e; border-radius: 12px; padding: 40px; text-align: center; color: #6b7280; font-size: 15px; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="user-info">
-        <h3 id="welcomeUser">Loading Profile...</h3>
-        <small id="userPhone">07XXXXXXXX</small>
-    </div>
-    <div class="balance-container">
-        <button class="nav-btn" onclick="openModal('profileModal')">👤 Profile & Invite</button>
-        <button class="nav-btn" style="background:#00ff88; color:#121212;" onclick="openModal('depositModal')">💰 Deposit</button>
-        <button class="nav-btn" style="background:#eab308; color:#121212;" onclick="openModal('withdrawModal')">💸 Withdraw</button>
-        <div class="balance-box">
-            <div style="font-size: 12px; color: #aaa; margin-bottom: 3px;">Account Balance</div>
-            <div id="userBalance" style="font-size: 22px; font-weight: bold; color: #00ffcc;">0 UGX</div>
+<div class="dashboard-container">
+    <div class="navbar">
+        <div class="user-meta">
+            <h2 id="welcomeNameBox">Loading Profile...</h2>
+            <p id="userPhoneBox">07XXXXXXXX</p>
         </div>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-</div>
-
-<div style="max-width: 1200px; margin: 0 auto 20px auto;">
-    <h2 style="margin-bottom: 25px; border-left: 4px solid #00ffcc; padding-left: 12px; font-size: 24px;">Available Hardware Machines</h2>
-</div>
-<div class="grid-container" id="machinesContainer"></div>
-
-<div style="max-width: 1200px; margin: 50px auto 20px auto;">
-    <h2 style="margin-bottom: 25px; border-left: 4px solid #00ff88; padding-left: 12px; font-size: 24px;">Your Running Machines</h2>
-</div>
-<div class="grid-container" id="activeMachinesContainer" style="margin-bottom: 40px;">
-    <div id="noMachinesText" style="grid-column: 1/-1; text-align: center; color: #888; background: #1e1e1e; padding: 40px; border-radius: 12px; border: 1px solid #2a2a2a; font-size: 15px;">
-        You don't have any active mining hardware deployed yet. Buy a machine above to start earning.
-    </div>
-</div>
-
-<!-- PROFILE MODAL -->
-<div class="modal" id="profileModal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('profileModal')">&times;</span>
-        <h2 style="color:#00ffcc; margin-top:0;">Your Profile Dashboard</h2>
-        <hr style="border-color:#333; margin: 15px 0;">
-        <p><strong>Username:</strong> <span id="profName">-</span></p>
-        <p><strong>Mobile Money Phone:</strong> <span id="profPhone">-</span></p>
-        <p><strong>Active Machine Contracts:</strong> <span id="profMachines">0</span></p>
-        <p><strong>Total Invited Friends:</strong> <span id="profReferrals" style="color:#00ffcc; font-weight:bold;">0</span></p>
-        <hr style="border-color:#333; margin: 15px 0;">
-        <h4 style="margin:0 0 5px 0; color:#00ffcc;">Your Copyable Invite Link</h4>
-        <input type="text" id="inviteLinkField" readonly>
-        <button class="nav-btn" style="width:100%; justify-content:center;" onclick="copyInviteLink()">📋 Copy Invite Link</button>
-    </div>
-</div>
-
-<!-- MANUAL DEPOSIT MODAL (FAHAD BATEMYE PAYMENT DETAILS) -->
-<div class="modal" id="depositModal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('depositModal')">&times;</span>
-        <h2 style="color:#00ffcc; margin-top:0;">Deposit Money</h2>
-        
-        <div class="payment-instructions">
-            <span style="color:#ffcc00; font-weight:bold; font-size:15px;">⚠️ Follow Payout Instructions:</span><br>
-            Please send your deposit amount manually to the mobile number below before filling out this verification form.
-            
-            <div class="merchant-highlight">
-                📱 Number: 0740399509 <br>
-                👤 Name: FAHAD BATEMYE
+        <div class="nav-actions">
+            <button class="btn btn-profile">👤 Profile & Invite</button>
+            <button class="btn btn-deposit">💰 Deposit</button>
+            <button class="btn btn-withdraw">⚙️ Withdraw</button>
+            <div class="balance-box">
+                <small>Account Balance</small>
+                <span id="userBalanceBox">0 UGX</span>
             </div>
-
-            <strong>How to send on MTN:</strong><br>
-            Dial *165*1*1# -> Enter 0740399509 -> Enter Amount -> Confirm name **FAHAD BATEMYE** -> Enter PIN.<br><br>
-            
-            <strong>How to send on Airtel:</strong><br>
-            Dial *185*1*1# -> Enter 0740399509 -> Enter Amount -> Confirm name **FAHAD BATEMYE** -> Enter PIN.
+            <button onclick="logout()" class="btn btn-logout">Logout</button>
         </div>
+    </div>
 
-        <h3 style="margin-top: 0; font-size: 16px; color: #00ffcc;">Submit Payment Verification</h3>
-        
-        <label for="depositAmount">Amount Sent (UGX):</label>
-        <input type="number" id="depositAmount" placeholder="e.g. 30000" min="5000" required>
-        
-        <label for="depositTxId">Transaction ID / Reference:</label>
-        <input type="text" id="depositTxId" placeholder="e.g. 1928374615" required>
-        
-        <button class="nav-btn" style="width:100%; background:#00ff88; color:#121212; justify-content:center;" onclick="processDeposit()">Submit Payment Request</button>
+    <h2 class="section-title">Available Hardware Machines</h2>
+    <div class="grid-container">
+        <div class="card">
+            <h3>Eco Miner V1</h3>
+            <div class="cost">30,000 UGX</div>
+            <div class="details">Daily Yield: 3,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 270,000 UGX</div>
+            <button onclick="buyMachine(1, 30000, 3000, 90)" class="btn btn-buy">Activate Node</button>
+        </div>
+        <div class="card">
+            <h3>Cloud Core Server</h3>
+            <div class="cost">50,000 UGX</div>
+            <div class="details">Daily Yield: 5,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 450,000 UGX</div>
+            <button onclick="buyMachine(2, 50000, 5000, 90)" class="btn btn-buy">Activate Node</button>
+        </div>
+        <div class="card">
+            <h3>Supercomputing Cluster</h3>
+            <div class="cost">80,000 UGX</div>
+            <div class="details">Daily Yield: 8,000 UGX<br>Runtime Period: 90 Days<br>Total Income: 720,000 UGX</div>
+            <button onclick="buyMachine(3, 80000, 8000, 90)" class="btn btn-buy">Activate Node</button>
+        </div>
+    </div>
+
+    <h2 class="section-title">Your Running Machines</h2>
+    <div class="grid-container" id="runningMachinesContainer">
+        <div class="empty-state">You don't have any active mining hardware deployed yet. Buy a machine above to start earning.</div>
     </div>
 </div>
 
-<!-- WITHDRAWAL MODAL -->
-<div class="modal" id="withdrawModal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('withdrawModal')">&times;</span>
-        <h2 style="color:#eab308; margin-top:0;">Mobile Money Cash Payout</h2>
-        <p style="color:#aaa; font-size:14px;">Transfer platform earnings balance directly into your active telecom SIM wallet.</p>
-        <label for="withdrawAmount">Cashout Amount (UGX):</label>
-        <input type="number" id="withdrawAmount" placeholder="Min 5,000 UGX" min="5000">
-        <button class="nav-btn" style="width:100%; background:#eab308; color:#121212; justify-content:center;" onclick="processWithdrawal()">Initialize Cashout</button>
-    </div>
-</div>
-
-<script>
-const machines = [
-    { id: 1, name: "Eco Miner V1", cost: 30000, daily: 3000, period: 90, img: "images/m1.jfif" },
-    { id: 2, name: "Cloud Core Server", cost: 50000, daily: 5000, period: 90, img: "images/m2.jfif" },
-    { id: 3, name: "Supercomputing Cluster", cost: 100000, daily: 8000, period: 90, img: "images/m3.jfif" },
-    { id: 4, name: "Quantum Farm Rig", cost: 200000, daily: 20000, period: 90, img: "images/m4.jfif" },
-    { id: 5, name: "Enterprise Mainframe Node", cost: 500000, daily: 50000, period: 90, img: "images/m5.jfif" }
-];
-
-
-
-
-
-const activePhone = localStorage.getItem('activePhone');
-
-async function fetchUserProfile() {
-    if (!activePhone) {
-        window.location.href = 'index.html';
-        return;
-    }
-    try {
-        const response = await fetch(`/api/user/${activePhone}`);
-        const result = await response.json();
-        if (result.success) {
-            document.getElementById('welcomeUser').innerText = `Welcome, ${result.user.username}`;
-            document.getElementById('userPhone').innerText = result.user.phone;
-            document.getElementById('userBalance').innerText = `${result.user.balance.toLocaleString()} UGX`;
-            
-            document.getElementById('profName').innerText = result.user.username;
-            document.getElementById('profPhone').innerText = result.user.phone;
-            document.getElementById('profMachines').innerText = result.user.investments.length;
-            document.getElementById('profReferrals').innerText = result.user.referralCount || 0;
-            
-            document.getElementById('inviteLinkField').value = `${window.location.origin}/index.html?ref=${result.user.phone}`;
-
-            // Render running machines list tracking
-            const activeContainer = document.getElementById('activeMachinesContainer');
-            const noMachText = document.getElementById('noMachinesText');
-            
-            if (activeContainer) {
-                activeContainer.querySelectorAll('.running-card').forEach(el => el.remove());
-
-                if (result.user.investments && result.user.investments.length > 0) {
-                    if (noMachText) noMachText.style.display = 'none';
-                    result.user.investments.forEach(inv => {
-                        const template = machines.find(m => m.id === inv.machineId) || { name: "Mining Hardware Node", img: "https://picsum.photos" };
-                        const card = document.createElement('div');
-                        card.className = 'machine-card running-card';
-                        card.style.borderColor = '#00ff88';
-                        card.innerHTML = `
-                            <img src="${template.img}" alt="running" class="machine-img" style="filter: grayscale(20%);">
-                            <div class="machine-details" style="background: #141f18;">
-                                <div>
-                                    <div class="machine-title" style="color: #00ff88; font-size: 18px; margin-bottom: 10px;">🟢 Running: ${template.name}</div>
-                                    <div class="stats-row"><span>Total Deposited:</span><span>${inv.cost.toLocaleString()} UGX</span></div>
-                                    <div class="stats-row"><span>Accumulated:</span><span style="color:#00ff88; font-weight:bold;">+${(inv.daysEarned * inv.dailyRate).toLocaleString()} UGX</span></div>
-                                    <div class="stats-row"><span>Timeline Track:</span><span style="font-weight:bold; color: #fff;">${inv.daysEarned} / ${inv.period} Days Connected</span></div>
-                                </div>
-                            </div>
-                        `;
-                        activeContainer.appendChild(card);
-                    });
-                } else {
-                    if (noMachText) noMachText.style.display = 'block';
-                }
-            }
-        }
-    } catch (err) {
-        console.error("Error updating profile visual views:", err);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const container = document.getElementById('machinesContainer');
-    if (container) {
-        machines.forEach(m => {
-            const card = document.createElement('div');
-            card.className = 'machine-card';
-            card.innerHTML = `
-                <img src="${m.img}" alt="${m.name}" class="machine-img">
-                <div class="machine-details">
-                    <div>
-                        <div class="machine-title">${m.name}</div>
-                        <div class="stats-row"><span>Investment Price:</span><span class="stat-val">${m.cost.toLocaleString()} UGX</span></div>
-                        <div class="stats-row"><span>Daily Dividend:</span><span class="stat-val" style="color:#00ff88;">+${m.daily.toLocaleString()} UGX</span></div>
-                        <div class="stats-row"><span>Contract Period:</span><span>${m.period} Days</span></div>
-                    </div>
-                    <button class="rent-btn" onclick="rentMachine(${m.id}, ${m.cost}, ${m.daily}, ${m.period})">Invest Now</button>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    fetchUserProfile();
-    setInterval(fetchUserProfile, 4000);
-});
-
-async function rentMachine(id, cost, dailyRate, period) {
-    if (!confirm(`Are you sure you want to deploy this hardware machine for ${cost.toLocaleString()} UGX?`)) return;
-    try {
-        const response = await fetch('/api/invest', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: activePhone, machineId: id, cost, dailyRate, period })
-        });
-        const result = await response.json();
-        alert(result.message);
-        fetchUserProfile();
-    } catch (err) {
-        alert("Transaction processing fault occurred.");
-    }
-}
-
-async function processDeposit() {
-    const amount = document.getElementById('depositAmount').value;
-    const txId = document.getElementById('depositTxId').value.trim();
-
-    if(!amount || amount < 5000) {
-        alert("Please enter a valid amount greater than 5,000 UGX");
-        return;
-    }
-    if(!txId) {
-        alert("Please enter your transaction reference ID to allow verification.");
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/deposit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: activePhone, amount: amount, txId: txId })
-        });
-        const result = await response.json();
-        if(result.success) {
-            alert("Payment Request Logged!\nAdmin will review your transfer to FAHAD BATEMYE and credit your dashboard shortly.");
-            closeModal('depositModal');
-            document.getElementById('depositAmount').value = "";
-            document.getElementById('depositTxId').value = "";
-            fetchUserProfile();
-        }
-    } catch (err) {
-        alert("Deposit processing server error.");
-    }
-}
-
-async function processWithdrawal() {
-    const amount = document.getElementById('withdrawAmount').value;
-    if (!amount || amount < 5000) {
-        alert("Please enter a valid amount greater than or equal to 5,000 UGX");
-        return;
-    }
-    try {
-        const response = await fetch('/api/withdraw', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: activePhone, amount: amount })
-        });
-        const result = await response.json();
-        alert(result.message);
-        if (result.success) {
-            closeModal('withdrawModal');
-            document.getElementById('withdrawAmount').value = "";
-            fetchUserProfile();
-        }
-    } catch (err) {
-        alert("Communication fault connecting to payout API routes.");
-    }
-}
-
-function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-function copyInviteLink() {
-    const copyText = document.getElementById("inviteLinkField");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(copyText.value);
-    alert("Invite Link copied successfully!");
-}
-
-function logout() {
-    localStorage.removeItem('activePhone');
-    window.location.href = 'index.html';
-}
-    <!-- Floating WhatsApp Customer Care Button -->
+<!-- Floating WhatsApp Customer Care Button System Panel Box Component Container -->
 <a href="https://wa.me." 
    target="_blank" 
    style="position: fixed; bottom: 20px; right: 20px; background-color: #25d366; color: white; padding: 14px 20px; border-radius: 50px; font-family: 'Segoe UI', Arial, sans-serif; font-size: 16px; font-weight: bold; text-decoration: none; box-shadow: 0px 4px 10px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px; z-index: 99999;">
-   <!-- Simple WhatsApp SVG Icon Vector -->
    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://w3.org">
        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.003 5.324 5.328 0 11.859 0c3.166.001 6.141 1.233 8.377 3.469 2.235 2.237 3.465 5.212 3.464 8.381-.003 6.535-5.328 11.86-11.859 11.86h-.002c-2.008-.002-3.982-.534-5.734-1.548L0 24zm6.273-3.754l.375.223c1.551.921 3.328 1.407 5.148 1.408h.005c5.495 0 9.967-4.473 9.97-9.97.002-2.662-1.033-5.166-2.915-7.05C17.014 3.016 14.512 1.977 11.86 1.977c-5.497 0-9.97 4.474-9.973 9.971-.001 1.929.503 3.813 1.46 5.512l.24.423-.997 3.64 3.743-.981zM17.75 14.73c-.314-.157-1.858-.917-2.146-1.022-.288-.105-.497-.157-.706.157-.208.314-.808 1.022-.99 1.23-.181.208-.363.233-.677.077-.314-.157-1.325-.488-2.525-1.558-.933-.832-1.564-1.86-1.747-2.174-.182-.314-.02-.484.137-.64.142-.141.314-.367.472-.55.157-.184.21-.314.314-.524.105-.21.053-.393-.026-.55-.08-.157-.706-1.701-.967-2.33-.254-.609-.513-.526-.706-.536-.183-.01-.393-.012-.603-.012-.21 0-.55.08-.838.393-.288.314-1.1 1.074-1.1 2.62 0 1.545 1.127 3.039 1.284 3.249.157.21 2.217 3.385 5.372 4.746.75.324 1.336.518 1.792.663.754.24 1.44.207 1.983.125.604-.093 1.858-.76 2.12-1.46.262-.699.262-1.309.184-1.434-.08-.125-.288-.209-.603-.366z"/>
    </svg>
    Chat with Support
 </a>
 
+<script>
+const activePhone = localStorage.getItem('activePhone');
+if (!activePhone) {
+    window.location.href = 'index.html';
+}
+
+async function loadDashboardData() {
+    try {
+        const response = await fetch(`/api/user/${activePhone}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('welcomeNameBox').innerText = `Welcome, ${data.user.username}`;
+            document.getElementById('userPhoneBox').innerText = data.user.phone;
+            document.getElementById('userBalanceBox').innerText = `${data.user.balance.toLocaleString()} UGX`;
+            
+            const machContainer = document.getElementById('runningMachinesContainer');
+            if (data.user.investments && data.user.investments.length > 0) {
+                machContainer.innerHTML = '';
+                data.user.investments.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.style.borderColor = '#00ff88';
+                    div.innerHTML = `
+                        <h3>Eco Node M${m.machineId}</h3>
+                        <div class="cost" style="color:#00ff88;">Active</div>
+                        <div class="details">Daily Yield: ${m.dailyRate.toLocaleString()} UGX<br>Earned so far: ${m.daysEarned} Days</div>
+                    `;
+                    machContainer.appendChild(div);
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Error connecting to data routes.", err);
+    }
+}
+
+async function buyMachine(machineId, cost, dailyRate, period) {
+    if (!confirm("Are you sure you want to activate this computing node matrix contract?")) return;
+    try {
+        const response = await fetch('/api/invest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: activePhone, machineId, cost, dailyRate, period })
+        });
+        const res = await response.json();
+        alert(res.message);
+        if (res.success) loadDashboardData();
+    } catch (err) {
+        alert("Transaction route transmission failure.");
+    }
+}
+
+function logout() {
+    localStorage.removeItem('activePhone');
+    window.location.href = 'index.html';
+}
+
+// Initialize on profile load
+loadDashboardData();
 </script>
 </body>
 </html>
