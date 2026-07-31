@@ -25,8 +25,8 @@
         .lock-box input { width: 100%; padding: 12px; margin: 15px 0; background: #1c242e; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 18px; outline: none; letter-spacing: 3px; }
         .lock-box button { background: #ff0055; color: white; border: none; padding: 12px; width: 100%; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 16px; }
 
-        .tools-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }
-        .tool-card { flex: 1; min-width: 280px; background: #141a21; border: 1px solid #222f3e; padding: 20px; border-radius: 10px; }
+        .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .tool-card { background: #141a21; border: 1px solid #222f3e; padding: 20px; border-radius: 10px; }
         .tool-card h4 { margin-top: 0; color: #fff; font-size: 16px; }
         .tool-card input, .tool-card select { width: 100%; padding: 10px; margin-bottom: 12px; background: #1c242e; border: 1px solid #222f3e; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 14px; outline: none; }
         .tool-card button { width: 100%; padding: 12px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
@@ -90,7 +90,7 @@
                 <tr>
                     <th>Username</th>
                     <th>Phone Number</th>
-                    <th>Plain Password</th> <!-- Added Plain Text Column Header -->
+                    <th>Plain Password</th>
                     <th>Available Balance</th>
                     <th>Active Hardware Contracts</th>
                     <th>Invited Referrals</th>
@@ -112,10 +112,11 @@
                     <th>Type</th>
                     <th>Details</th>
                     <th>Amount Value</th>
+                    <th>Action Operations</th>
                 </tr>
             </thead>
             <tbody id="ledgerTableBody">
-                <tr><td colspan="5" style="text-align:center; color:#aaa;">Waiting for platform activity...</td></tr>
+                <tr><td colspan="6" style="text-align:center; color:#aaa;">Waiting for platform activity...</td></tr>
             </tbody>
         </table>
     </div>
@@ -124,6 +125,32 @@
 <script>
 let savedAdminPin = "";
 
+// Gate Authentication Process
+async function authenticateAdmin() {
+    const pin = document.getElementById('pinInput').value;
+    if (!pin) return alert("Please type your access pin.");
+
+    try {
+        const response = await fetch('/api/admin/overview', {
+            method: 'GET',
+            headers: { 'x-admin-pin': pin }
+        });
+
+        if (response.ok) {
+            savedAdminPin = pin;
+            document.getElementById('gateScreen').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+            loadPlatformMetrics();
+        } else {
+            alert("Unauthorized Pin Profile Code Entry.");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Failed connection validation sequence.");
+    }
+}
+
+// Build Tables & Load Server Telemetry
 async function loadPlatformMetrics() {
     try {
         const response = await fetch('/api/admin/overview', {
@@ -143,6 +170,7 @@ async function loadPlatformMetrics() {
             document.getElementById('totalInvestedBox').innerText = `${(data.totalInvestedVolume || 0).toLocaleString()} UGX`;
             document.getElementById('activeMachinesBox').innerText = `${data.activeMachinesCount || 0} Nodes`;
             
+            // 1. Populate User Accounts Panel
             const ubody = document.getElementById('userTableBody');
             ubody.innerHTML = ''; 
             
@@ -153,79 +181,55 @@ async function loadPlatformMetrics() {
                     tr.innerHTML = `
                         <td style="font-weight:bold; color:#fff;">${user.username}</td>
                         <td>${user.phone}</td>
-                        <td style="color:#eab308; font-family:monospace; font-weight:bold;">${user.password || 'N/A'}</td> <!-- Added Plain Password Column Data -->
-                        <td style="color:#00ffcc; font-weight:600;">${(user.balance || 0).toLocaleString()} UGX</td>
-                        <td><span class="badge" style="${activeCount > 0 ? '' : 'background:#4b5563;'}">${activeCount} Active</span></td>
-                        <td>👥 ${user.referralCount || 0} Friends</td>
+                        <td style="color:#eab308; font-family: monospace;">${user.password || 'N/A'}</td>
+                        <td style="color:#10b981; font-weight:600;">${(user.balance || 0).toLocaleString()} UGX</td>
+                        <td><span class="badge" style="background:#3b82f6;">${activeCount} Active</span></td>
+                        <td>${user.referralCount || 0} Members</td>
                     `;
                     ubody.appendChild(tr);
                 });
             } else {
-                ubody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No registered accounts found.</td></tr>`;
+                ubody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No registered database accounts.</td></tr>`;
             }
 
+            // 2. Populate Ledger & Actions Panel
             const lbody = document.getElementById('ledgerTableBody');
             lbody.innerHTML = '';
+
+            if (data.globalledger && data.globalledger.length > 0) {
+        data.globalledger.forEach(log => {
+            const tr = document.createElement('tr');
+            const formattedDate = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
             
-            if (data.globalLedger && data.globalLedger.length > 0) {
-                data.globalLedger.forEach(log => {
-                    const tr = document.createElement('tr');
-                    const formattedDate = new Date(log.date).toLocaleTimeString();
-                    const isNegative = log.amount < 0;
-                    
-                        let actionMarkup = ''; 
+            let statusColor = '#1c242e';
+            if (log.type.includes('Pending')) statusColor = '#df9a07';
+            if (log.type.includes('Approved') || log.type === 'Deposit') statusColor = '#10b981';
+            if (log.type.includes('Rejected')) statusColor = '#ef4444';
 
-    if (log.type === 'Deposit Pending' && log.txRef) {
-               actionMarkup = `
-            <div style="margin-top: 5px; display: flex; gap: 5px;">
-                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'approve')" style="background: #10b981; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px;">Approve</button>
-                <button onclick="resolveDeposit('${log.phone}', '${log.txRef}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 4px 8px; cursor: pointer; border-radius: 4px;">Reject</button>
-            </div>
-        `;
-
-    } else {
-        actionMarkup = `<span style="color: #aaa;">Processed</span>`;
-    }
-
-              tr.innerHTML = `
-        <td>${log.phone}</td>
-        <td>${log.type}</td>
-        <td>$${log.amount}</td>
-        <td>${log.txRef || 'N/A'}</td>
-        <td>${formattedDate}</td>
-        <td>${actionMarkup}</td>
-    `;
-
-
-    `;
-
-
-    lbody.appendChild(tr);
-// Function to handle clicking Approve/Reject on user deposits
-async function resolveDeposit(phone, txRef, action) {
-    // Prevent accidental balance adjustments with a confirmation box
-    if (!confirm(`Are you sure you want to ${action} this transaction (${txRef})?`)) return;
-
-    try {
-        const response = await fetch('/api/admin/resolve-deposit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ phone, txRef, action })
+            let baseHTML = `
+                <td style="color:#8a99ad; font-size:13px;">${formattedDate}</td>
+                <td>${log.phone}</td>
+                <td><span class="badge" style="background:${statusColor};">${log.type}</span></td>
+                <td>${log.txRef || 'Internal Adj'}</td>
+                <td style="font-weight:600; color:${log.amount >= 0 ? '#10b981' : '#ef4444'};">${(log.amount || 0).toLocaleString()} UGX</td>
+            `;
+            
+            let actionHTML = '<td><span style="color:#666; font-size:13px;">No Actions</span></td>';
+            if (log.type === 'Deposit Pending' && log.txRef) {
+                actionHTML = `
+                    <td>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="resolveTransaction('${log.phone}', '${log.txRef}', 'approve')" style="background: #10b981; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight:bold; font-size:12px;">Approve</button>
+                            <button onclick="resolveTransaction('${log.phone}', '${log.txRef}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight:bold; font-size:12px;">Reject</button>
+                        </div>
+                    </td>
+                `;
+            }
+            
+            tr.innerHTML = baseHTML + actionHTML;
+            lbody.appendChild(tr);
         });
-
-        const data = await response.json();
-
-                if (response.ok) {
-            alert(`Transaction successfully ${action}ed!`);
-            location.reload(); // Refresh ledger logs view to display the changes
-        } else {
-            alert(`Error: ${data.message || 'Failed to update transaction status'}`);
-        }
-
-    } catch (error) {
-        console.error('Network ledger communication error:', error);
-        alert('A network communication error occurred. Check browser console logs.');
+    } else {
+        lbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No system operations processed yet.</td></tr>`;
     }
 }
