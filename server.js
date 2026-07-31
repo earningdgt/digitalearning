@@ -247,6 +247,23 @@ setInterval(async () => {
     try {
         const users = await User.find({});
         for (let user of users) {
+            let userUpdated = false;
+            if (user.investments && user.investments.length > 0) {
+                user.investments.forEach(inv => {
+                    user.balance += Number(inv.dailyRate || 0);
+                    userUpdated = true;
+                });
+            }
+            if (userUpdated) {
+                await user.save();
+            }
+        }
+        } catch (err) {
+
+        console.error("Background passive contract calculation runtime fault:", err);
+    }
+}, 60000);
+
 // START THE LIVE EXPORT EXPRESS SERVER ENGINE
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
