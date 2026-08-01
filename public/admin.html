@@ -230,10 +230,10 @@ headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
 body: JSON.stringify({ phone, txRef, action })
 });
 const resData = await response.json();
-alert(resData.message || "Ledger settlement command broadcast complete.");
+alert(resData.message || "Ledger settlement complete.");
 loadPlatformMetrics();
-} catch(e) { alert("Server verification connection error."); }
-}
+} catch(e) { alert("Server connection error."); }
+
     </script>
 </body>
 </html>
