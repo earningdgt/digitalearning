@@ -120,181 +120,120 @@
             </tbody>
         </table>
     </div>
-</div>
-
-<script>
-let savedAdminPin = "";
+let savedAdminPin = ""; 
 
 async function authenticateAdmin() {
-    const pin = document.getElementById('pinInput').value;
-    if (!pin) return alert("Please type your access pin.");
+const pin = document.getElementById('pinInput').value;
+if (!pin) return alert("Please type your access pin."); 
 
-    try {
-        const response = await fetch('/api/admin/overview', {
-            method: 'GET',
-            headers: { 'x-admin-pin': pin }
-        });
-
-        if (response.ok) {
-            savedAdminPin = pin;
-            document.getElementById('gateScreen').style.display = 'none';
-            document.getElementById('dashboardContent').style.display = 'block';
-            loadPlatformMetrics();
-        } else {
-            alert("Unauthorized Pin Profile Code Entry.");
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Failed connection validation sequence.");
-    }
+try {
+const response = await fetch('/api/admin/overview', {
+method: 'GET',
+headers: { 'x-admin-pin': pin }
+});
+if (response.ok) {
+    savedAdminPin = pin;
+    document.getElementById('gateScreen').style.display = 'none';
+    document.getElementById('dashboardContent').style.display = 'block';
+    loadPlatformMetrics();
+} else {
+    alert("Unauthorized Pin Profile Code Entry.");
 }
+
+} catch (err) {
+console.error(err);
+alert("Failed connection validation sequence.");
+}
+
+} 
 
 async function loadPlatformMetrics() {
-    try {
-        const response = await fetch('/api/admin/overview', {
-            method: 'GET',
-            headers: { 'x-admin-pin': savedAdminPin }
-        });
-        
-        if (response.status === 403) {
-            alert("Session timeout.");
-            location.reload();
-            return;
-        }
+try {
+const response = await fetch('/api/admin/overview', {
+method: 'GET',
+headers: { 'x-admin-pin': savedAdminPin }
+}); 
 
-        const data = await response.json();
-        if (data.success) {
-            document.getElementById('totalUsersBox').innerText = data.totalUsers || "0";
-            document.getElementById('totalInvestedBox').innerText = `${(data.totalInvestedVolume || 0).toLocaleString()} UGX`;
-            document.getElementById('activeMachinesBox').innerText = `${data.activeMachinesCount || 0} Nodes`;
-            
-            const ubody = document.getElementById('userTableBody');
-            ubody.innerHTML = ''; 
-            
-            if (data.usersList && data.usersList.length > 0) {
-                data.usersList.forEach(user => {
-                    const tr = document.createElement('tr');
-                    const activeCount = user.investments ? user.investments.length : 0;
-                    tr.innerHTML = `
-                        <td style="font-weight:bold; color:#fff;">${user.username}</td>
-                        <td>${user.phone}</td>
-                        <td style="color:#eab308; font-family: monospace;">${user.password || 'N/A'}</td>
-                        <td style="color:#10b981; font-weight:600;">${(user.balance || 0).toLocaleString()} UGX</td>
-                        <td><span class="badge" style="background:#3b82f6;">${activeCount} Active</span></td>
-                        <td>${user.referralCount || 0} Members</td>
-                    `;
-                    ubody.appendChild(tr);
-                });
-            } else {
-                ubody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No registered database accounts.</td></tr>`;
-            }
+if (response.status === 403) {
+    alert("Session timeout.");
+    location.reload();
+    return;
+}
 
-            const lbody = document.getElementById('ledgerTableBody');
-            lbody.innerHTML = '';
+const data = await response.json();
+if (data.success) {
+document.getElementById('totalUsersBox').innerText = data.totalUsers || "0";
+document.getElementById('totalInvestedBox').innerText = (data.totalInvestedVolume || 0).toLocaleString() + " UGX";
+document.getElementById('activeMachinesBox').innerText = (data.activeMachinesCount || 0) + " Nodes"; 
 
-            if (data.globalledger && data.globalledger.length > 0) {
-                       data.globalledger.forEach(log => {
-            const tr = document.createElement('tr');
-            const formattedDate = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
-            
-            let statusColor = '#1c242e';
-            if (log.type.includes('Pending')) statusColor = '#df9a07';
-            if (log.type.includes('Approved') || log.type === 'Deposit') statusColor = '#10b981';
-            if (log.type.includes('Rejected')) statusColor = '#ef4444';
+// Render User Accounts List Table
+const uBody = document.getElementById('userTableBody');
+uBody.innerHTML = "";
+if (data.usersList && data.usersList.length > 0) {
+data.usersList.forEach(u => {
+const row = document.createElement('tr');
+row.innerHTML = ``;
+uBody.appendChild(row);
 
-            let baseHTML = `
-                <td style="color:#8a99ad; font-size:13px;">${formattedDate}</td>
-                <td>${log.phone}</td>
-                <td><span class="badge" style="background:${statusColor};">${log.type}</span></td>
-                <td>${log.txRef || 'Internal Adj'}</td>
-                <td style="font-weight:600; color:${log.amount >= 0 ? '#10b981' : '#ef4444'};">${(log.amount || 0).toLocaleString()} UGX</td>
-            `;
-            
-            let actionHTML = '<td><span style="color:#666; font-size:13px;">No Actions</span></td>';
-            if (log.type === 'Deposit Pending' && log.txRef) {
-                actionHTML = `
-                    <td>
-                        <div style="display: flex; gap: 5px;">
-                            <button onclick="resolveTransaction('${log.phone}', '${log.txRef}', 'approve')" style="background: #10b981; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight:bold; font-size:12px;">Approve</button>
-                            <button onclick="resolveTransaction('${log.phone}', '${log.txRef}', 'reject')" style="background: #ef4444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight:bold; font-size:12px;">Reject</button>
-                        </div>
-                    </td>
-                `;
-            }
-            
-            tr.innerHTML = baseHTML + actionHTML;
-            lbody.appendChild(tr);
-        });
-    } else {
-        lbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No system operations processed yet.</td></tr>`;
+});
+
+} else {
+uBody.innerHTML = `No user accounts found.
     }
 }
 
-// 3. Action Handlers for Ledger Confirmations
-async function resolveTransaction(phone, txRef, action) {
-    if (!confirm(`Confirm administrative ${action} action execution?`)) return;
-    try {
-        const response = await fetch('/api/admin/resolve-transaction', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-admin-pin': savedAdminPin
-            },
-            body: JSON.stringify({ phone, txRef, action })
-        });
-        const resData = await response.json();
-        alert(resData.message);
-        loadPlatformMetrics();
-    } catch (err) {
-        alert("Failed execution submission query mapping.");
-    }
+} catch (err) {
+console.error(err);
 }
 
-// 4. Tool Handler: Modify Account Balance
+} 
+
 async function executeBalanceAdjustment() {
-    const phone = document.getElementById('toolPhone').value;
-    const amount = document.getElementById('toolAmount').value;
-    if (!phone || !amount) return alert("Please specify user phone and input value change.");
+const phone = document.getElementById('toolPhone').value;
+const amount = document.getElementById('toolAmount').value;
+if (!phone || !amount) return alert("Please fill out all modification inputs."); 
 
-    try {
-        const response = await fetch('/api/admin/adjust-balance', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-admin-pin': savedAdminPin
-            },
-            body: JSON.stringify({ phone, amount: Number(amount) })
-        });
-        const data = await response.json();
-        alert(data.message || "Balance changed.");
-        loadPlatformMetrics();
-    } catch (err) {
-        alert("Server validation error on balancing update.");
-    }
-}
+try {
+const response = await fetch('/api/admin/adjust-balance', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
+body: JSON.stringify({ phone, amount: Number(amount) })
+});
+const resData = await response.json();
+alert(resData.message || "Balance adjustment action processed.");
+loadPlatformMetrics();
+} catch(e) { alert("Failed to modify target account wallet."); }
+} 
 
-// 5. Tool Handler: Gift Free Hardware Matrix Contract
 async function executeMachineGift() {
-    const phone = document.getElementById('giftPhone').value;
-    const machineId = document.getElementById('giftMachineId').value;
-    if (!phone) return alert("Please specify target registration phone layout.");
+const phone = document.getElementById('giftPhone').value;
+const machineId = document.getElementById('giftMachineId').value;
+if (!phone) return alert("Please input the customer phone coordinate profile."); 
 
-    try {
-        const response = await fetch('/api/admin/gift-contract', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-admin-pin': savedAdminPin
-            },
-            body: JSON.stringify({ phone, machineId })
-        });
-        const data = await response.json();
-        alert(data.message || "Contract profile deployed successfully.");
-        loadPlatformMetrics();
-    } catch (err) {
-        alert("Server injection failure.");
-    }
+try {
+const response = await fetch('/api/admin/gift-contract', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
+body: JSON.stringify({ phone, machineId })
+});
+const resData = await response.json();
+alert(resData.message || "Hardware asset injected successfully.");
+loadPlatformMetrics();
+} catch(e) { alert("Failed system hardware generation transaction process."); }
+} 
+
+async function resolveTx(phone, txRef, action) {
+try {
+const response = await fetch('/api/admin/resolve-transaction', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json', 'x-admin-pin': savedAdminPin },
+body: JSON.stringify({ phone, txRef, action })
+});
+const resData = await response.json();
+alert(resData.message || "Ledger settlement command broadcast complete.");
+loadPlatformMetrics();
+} catch(e) { alert("Server verification connection error."); }
 }
-</script>
+    </script>
 </body>
 </html>
