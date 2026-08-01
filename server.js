@@ -1,221 +1,252 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
+const mongoose = require('mongoose'); // Swapped out 'fs' filesystem operations for MongoDB
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const ADMIN_SECRET_PIN = "9999"; 
-// TO THIS:
-const DATA_FILE = path.resolve(__dirname, 'users.json');
 
+// 1. Establish the Live MongoDB Database Connection
+const mongoURI = process.env.MONGODB_URI;
+if (!mongoURI) {
+    console.error("CRITICAL ERROR: MONGODB_URI environmental variable is missing inside Render dashboard!");
+}
 
+mongoose.connect(mongoURI)
+    .then(() => console.log('Successfully connected to secure MongoDB Cluster!'))
+    .catch(err => console.error('Database connection error:', err));
 
-// Helper functions to read/write local file storage
-const readData = () => {
-    try {
-        if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify([]));
-        return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    } catch (e) { return []; }
-};
+// 2. Define the Complete User Data Schema Model
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true },
+    phone: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, default: "user" },
+    balance: { type: Number, default: 0 },
+    referralCount: { type: Number, default: 0 },
+    referredBy: { type: String, default: null },
+    investments: { type: Array, default: [] },
+    withdrawals: { type: Array, default: [] },
+    transactions: { type: Array, default: [] }
+});
 
-const writeData = (data) => {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-};
+const User = mongoose.model('User', userSchema);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 1. Account Registration Module
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
     const { username, phone, password, referredBy } = req.body;
     if (!username || !phone || !password) return res.status(400).json({ success: false, message: "Missing required inputs" });
 
-    let users = readData();
-    if (users.find(u => u.phone === phone)) return res.status(400).json({ success: false, message: "Account already exists." });
+    try {
+        const existingUser = await User.findOne({ phone });
+        if (existingUser) return res.status(400).json({ success: false, message: "Account already exists." });
 
-    let newUser = { username, phone, password, role: "user", balance: 0, referralCount: 0, referredBy: referredBy || null, investments: [], withdrawals: [], transactions: [] };
+        let newUser = new User({ username, phone, password, referredBy: referredBy || null });
 
-    if (referredBy) {
-        let referrer = users.find(u => u.phone === referredBy);
-        if (referrer) {
-            referrer.referralCount += 1;
-            referrer.balance += 1000;
-            referrer.transactions.push({ type: "Referral Bonus", amount: 1000, date: new Date(), details: `Invited ${username}` });
+        if (referredBy) {
+            let referrer = await User.findOne({ phone: referredBy });
+            if (referrer) {
+                referrer.referralCount += 1;
+                referrer.balance += 1000;
+                referrer.transactions.push({ type: "Referral Bonus", amount: 1000, date: new Date(), details: `Invited ${username}` });
+                await referrer.save();
+            }
         }
-    }
 
-    users.push(newUser);
-    writeData(users);
-    res.json({ success: true, user: newUser });
+        await newUser.save();
+        res.json({ success: true, user: newUser });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // 2. Secure Login Verification
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { phone, password } = req.body;
-    let users = readData();
-    const user = users.find(u => u.phone === phone && u.password === password);
-    if (!user) return res.status(401).json({ success: false, message: "Incorrect security credentials." });
-    res.json({ success: true, user });
+    try {
+        const user = await User.findOne({ phone, password });
+        if (!user) return res.status(401).json({ success: false, message: "Incorrect security credentials." });
+        res.json({ success: true, user });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // 3. Fetch Single Client Profile
-app.get('/api/user/:phone', (req, res) => {
-    let users = readData();
-    const user = users.find(u => u.phone === req.params.phone);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    res.json({ success: true, user });
+app.get('/api/user/:phone', async (req, res) => {
+    try {
+        const user = await User.findOne({ phone: req.params.phone });
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+        res.json({ success: true, user });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // 4. Manual Request Logging Matrix
-app.post('/api/deposit', (req, res) => {
+app.post('/api/deposit', async (req, res) => {
     const { phone, amount, txId, details } = req.body;
-    let users = readData();
-    let user = users.find(u => u.phone === phone);
-    if (!user) return res.status(404).json({ success: false, message: "User profile not found." });
+    try {
+        let user = await User.findOne({ phone });
+        if (!user) return res.status(404).json({ success: false, message: "User profile not found." });
 
-    user.transactions.push({ type: "Deposit Pending", amount: parseInt(amount), date: new Date(), txRef: txId, details: details || `Tx ID: ${txId}` });
-    writeData(users);
-    res.json({ success: true, message: "Manual request logged successfully!" });
+        user.transactions.push({ type: "Deposit Pending", amount: parseInt(amount), date: new Date(), txRef: txId, details: details || `Tx ID: ${txId}` });
+        await user.save();
+        res.json({ success: true, message: "Manual request logged successfully!" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // 5. Activate Mining Contract
-app.post('/api/invest', (req, res) => {
+app.post('/api/invest', async (req, res) => {
     const { phone, machineId, cost, dailyRate, period } = req.body;
-    let users = readData();
-    let user = users.find(u => u.phone === phone);
-    if (!user || user.balance < cost) return res.status(400).json({ success: false, message: "Insufficient balance!" });
+    try {
+        let user = await User.findOne({ phone });
+        if (!user || user.balance < cost) return res.status(400).json({ success: false, message: "Insufficient balance!" });
 
-    user.balance -= cost;
-    user.investments.push({ machineId, cost, dailyRate, period, daysEarned: 0, purchaseDate: new Date() });
-    user.transactions.push({ type: "Investment", amount: -cost, date: new Date(), details: `Activated Machine M${machineId}` });
-    writeData(users);
-    res.json({ success: true, balance: user.balance });
+        user.balance -= cost;
+        user.investments.push({ machineId, cost, dailyRate, period, daysEarned: 0, purchaseDate: new Date() });
+        user.transactions.push({ type: "Investment", amount: -cost, date: new Date(), details: `Activated Machine M${machineId}` });
+        await user.save();
+        res.json({ success: true, balance: user.balance });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // 6. Initialize Payout Request
-app.post('/api/withdraw', (req, res) => {
+app.post('/api/withdraw', async (req, res) => {
     const { phone, amount } = req.body;
     const withdrawAmount = parseInt(amount);
-    let users = readData();
-    let user = users.find(u => u.phone === phone);
-    if (!user || user.balance < withdrawAmount) return res.status(400).json({ success: false, message: "Insufficient balance." });
+    try {
+        let user = await User.findOne({ phone });
+        if (!user || user.balance < withdrawAmount) return res.status(400).json({ success: false, message: "Insufficient balance." });
 
-    user.balance -= withdrawAmount;
-    const withdrawalId = 'WD-' + Math.random().toString(36).substr(2, 9).toUpperCase(); 
-    user.withdrawals.push({ id: withdrawalId, amount: withdrawAmount, status: "Pending Approval", requestedAt: new Date() });
-    user.transactions.push({ type: "Withdrawal Pending", amount: withdrawAmount, date: new Date(), txRef: withdrawalId, details: "Pending Cashout Review" });
-    writeData(users);
-    res.json({ success: true, balance: user.balance, txRef: withdrawalId });
+        user.balance -= withdrawAmount;
+        const withdrawalId = 'WD-' + Math.random().toString(36).substr(2, 9).toUpperCase(); 
+        user.withdrawals.push({ id: withdrawalId, amount: withdrawAmount, status: "Pending Approval", requestedAt: new Date() });
+        user.transactions.push({ type: "Withdrawal Pending", amount: withdrawAmount, date: new Date(), txRef: withdrawalId, details: "Pending Cashout Review" });
+        await user.save();
+        res.json({ success: true, balance: user.balance, txRef: withdrawalId });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // 7. Administrative Overview (Aligned perfectly with admin.html)
-app.get('/api/admin/overview', (req, res) => {
+app.get('/api/admin/overview', async (req, res) => {
     if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ success: false, message: "Access Denied" });
     
-    let users = readData();
-    let totalInvestedVolume = 0;
-    let activeMachinesCount = 0;
-    let globalledger = [];
+    try {
+        let users = await User.find({});
+        let totalInvestedVolume = 0;
+        let activeMachinesCount = 0;
+        let globalledger = [];
 
-    users.forEach(u => {
-        if(u.investments) {
-            u.investments.forEach(i => { totalInvestedVolume += i.cost; activeMachinesCount += 1; });
-        }
-        if(u.transactions) {
-            u.transactions.forEach(t => { 
-                globalledger.push({ 
-                    username: u.username, 
-                    phone: u.phone, 
-                    type: t.type, 
-                    amount: t.amount, 
-                    txRef: t.txRef || null, 
-                    timestamp: t.date 
-                }); 
-            });
-        }
-    });
+        users.forEach(u => {
+            if(u.investments) {
+                u.investments.forEach(i => { totalInvestedVolume += i.cost; activeMachinesCount += 1; });
+            }
+            if(u.transactions) {
+                u.transactions.forEach(t => { 
+                    globalledger.push({ 
+                        username: u.username, 
+                        phone: u.phone, 
+                        type: t.type, 
+                        amount: t.amount, 
+                        txRef: t.txRef || null, 
+                        timestamp: t.date 
+                    }); 
+                });
+            }
+        });
 
-    res.json({ 
-        success: true, 
-        totalUsers: users.length,
-        totalInvestedVolume, 
-        activeMachinesCount, 
-        usersList: users, 
-        globalledger 
-    });
+        res.json({ 
+            success: true, 
+            totalUsers: users.length,
+            totalInvestedVolume, 
+            activeMachinesCount, 
+            usersList: users, 
+            globalledger 
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 // 8. Resolve Deposits & Transactions
-app.post('/api/admin/resolve-transaction', (req, res) => {
+app.post('/api/admin/resolve-transaction', async (req, res) => {
     if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ message: "Access Denied" });
     
     const { phone, txRef, action } = req.body;
-    let users = readData();
-    let user = users.find(u => u.phone === phone);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    try {
+        let user = await User.findOne({ phone });
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-    let transaction = user.transactions.find(t => t.txRef === txRef && t.type === 'Deposit Pending');
-    if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
+        let transaction = user.transactions.find(t => t.txRef === txRef && t.type === 'Deposit Pending');
+        if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
-    if (action === 'approve') {
-        transaction.type = 'Deposit Approved';
-        user.balance += Number(transaction.amount); 
-    } else {
-        transaction.type = 'Deposit Rejected';
+        if (action === 'approve') {
+            transaction.type = 'Deposit Approved';
+            user.balance += Number(transaction.amount); 
+        } else {
+            transaction.type = 'Deposit Rejected';
+        }
+
+        // Inform Mongoose that an item inside the array structure was manually mutated
+        user.markModified('transactions');
+        await user.save();
+        return res.json({ message: `Transaction successfully completed!` });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
-
-    writeData(users);
-    return res.json({ message: `Transaction successfully completed!` });
 });
 
 // 9. Tool Route: Modify Account Balance
-app.post('/api/admin/adjust-balance', (req, res) => {
+app.post('/api/admin/adjust-balance', async (req, res) => {
     if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ message: "Access Denied" });
     
     const { phone, amount } = req.body;
-    let users = readData();
-    let user = users.find(u => u.phone === phone);
-    if (!user) return res.status(404).json({ message: "User phone record missing." });
+    try {
+        let user = await User.findOne({ phone });
+        if (!user) return res.status(404).json({ message: "User phone record missing." });
 
-    user.balance += Number(amount);
-    user.transactions.push({ type: "Admin Adjustment", amount: Number(amount), date: new Date(), details: "Balance changed by Administrator" });
-    
-    writeData(users);
-    res.json({ message: "User account balance adjusted successfully!" });
+        user.balance += Number(amount);
+        user.transactions.push({ type: "Admin Adjustment", amount: Number(amount), date: new Date(), details: "Balance changed by Administrator" });
+        
+        await user.save();
+        res.json({ message: "User account balance adjusted successfully!" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
 // 10. Tool Route: Gift Free Hardware Contract
-app.post('/api/admin/gift-contract', (req, res) => {
+app.post('/api/admin/gift-contract', async (req, res) => {
     if (req.headers['x-admin-pin'] !== ADMIN_SECRET_PIN) return res.status(403).json({ message: "Access Denied" });
     
     const { phone, machineId } = req.body;
-    let users = readData();
-    let user = users.find(u => u.phone === phone);
-    if (!user) return res.status(404).json({ message: "User profile not found." });
+    try {
+        let user = await User.findOne({ phone });
+        if (!user) return res.status(404).json({ message: "User profile not found." });
 
-    let dailyRate = 3000;
-    let title = "Eco Miner V1";
-    if (machineId === "2") { dailyRate = 5000; title = "Cloud Core Server"; }
-    if (machineId === "3") { dailyRate = 8000; title = "Supercomputing Cluster"; }
+        let dailyRate = 3000;
+        let title = "Eco Miner V1";
+        if (machineId === "2") { dailyRate = 5000; title = "Cloud Core Server"; }
+        if (machineId === "3") { dailyRate = 8000; title = "Supercomputing Cluster"; }
 
-    user.investments.push({ machineId, cost: 0, dailyRate, period: 30, daysEarned: 0, purchaseDate: new Date() });
-    user.transactions.push({ type: "Hardware Gift", amount: 0, date: new Date(), details: `Admin deployed free ${title}` });
-
-    writeData(users);
-    res.json({ message: "Free contract deployed successfully!" });
+        user.investments.push({ machineId, cost: 0, dailyRate, period: 30, daysEarned: 0, purchaseDate: new Date() });
+        user.transactions.push({ type: "Hardware Gift", amount: 0, date: new Date(), details: `Admin gifted ${title}` });
+        
+        await user.save();
+        res.json({ message: "Contract gifted successfully!" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 });
 
-// 11. Automated Yield Loop (Every 60 seconds)
-setInterval(() => {
-    let users = readData();
-    let updated = false;
-    users.forEach(user => {
-        if (user.investments && user.investments.length > 0) {
-            user.investments.forEach(inv => { user.balance += Number(inv.dailyRate || 0); updated = true; });
-        }
-    });
-    if (updated) writeData(users);
-}, 60000);
-
-// START EXPORT SERVER ENGINE
-app.listen(PORT, () => { console.log("Server running successfully!"); });
+app.listen(PORT, () => console.log(`Server listening live on port ${PORT}`));
