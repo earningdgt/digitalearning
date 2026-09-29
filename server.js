@@ -234,12 +234,16 @@ app.post('/api/admin/gift-contract', async (req, res) => {
         let user = await User.findOne({ phone });
         if (!user) return res.status(404).json({ message: "User profile not found." });
 
-        let dailyRate = 3000;
-        let title = "Eco Miner V1";
-        if (machineId === "2") { dailyRate = 5000; title = "Cloud Core Server"; }
-        if (machineId === "3") { dailyRate = 8000; title = "Supercomputing Cluster"; }
+              let dailyRate = 2000;
+        let title = "Electricity Space Slot";
+        let period = 30;
 
-        user.investments.push({ machineId, cost: 0, dailyRate, period: 30, daysEarned: 0, purchaseDate: new Date() });
+        if (machineId === "2") { 
+            dailyRate = 8000; 
+            title = "Agricultural Crop Space Slot"; 
+        }
+
+                user.investments.push({ machineId, cost: 0, dailyRate, period, daysEarned: 0, purchaseDate: new Date() });
         user.transactions.push({ type: "Hardware Gift", amount: 0, date: new Date(), details: `Admin gifted ${title}` });
         
         await user.save();
